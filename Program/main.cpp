@@ -58,6 +58,7 @@ int main (int argc, char *argv[])
 		if (!minFleetSize && !minMaxTour)
 		{
 			// Number of clock ticks allowed for the program
+			// get_cpu_time 返回停机时间
 			nb_ticks_allowed = c.get_cpu_time() * CLOCKS_PER_SEC;
 
 			// initialisation of the Parameters

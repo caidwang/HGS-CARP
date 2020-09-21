@@ -120,18 +120,18 @@ public:
 	// chromR[i][j] -> day i, route j, gives the index in the chromT of the first customer in this route
 	vector < vector<int> > chromR ;
 
-	// suivants[client][day] gives the next customer in the considered day
+	// follows[client][day] gives the next customer in the considered day
 	// Used to compute the Hamming distance between solutions
 	// if the customer does not exist in this day, returns -1
-	vector < vector<int> > suivants ;
+	vector < vector<int> > follows ;
 
-	// suivants[client][day] gives the previous customer in the considered day
+	// follows[client][day] gives the previous customer in the considered day
 	// Used to compute the Hamming distance between solutions
 	// if the customer does not exist in this day, returns -1
 	vector < vector<int> > precedents ;
 
-	// computing the suivants and precedents tables
-	void computeSuivants();
+	// computing the follows and precedents tables
+	void computeFollows();
 
 	// working table for split (dynamic programming for Split)
 	vector < vector < CoutSol> > potentiels ;

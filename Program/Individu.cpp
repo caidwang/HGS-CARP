@@ -46,11 +46,11 @@ Individu::Individu(Params * params, bool createAllStructures) : params(params)
 
 	for (int i=0 ; i< params->nbDepots + params->nbClients ; i++)
 	{
-		suivants.push_back(vector <int>());
-		precedents.push_back(vector <int>());
+		follows.emplace_back();
+		precedents.emplace_back();
 		for (int k=0 ; k <= params->nbDays ; k++)
 		{
-			suivants[i].push_back(-1);
+			follows[i].push_back(-1);
 			precedents[i].push_back(-1);
 		}
 	}
@@ -150,7 +150,7 @@ void Individu::recopieIndividu (Individu * destination , Individu * source)
 	destination->isFitnessComputed = source->isFitnessComputed ;
 	destination->age = 0 ;
 	destination->estValide = source->estValide ;
-	destination->suivants = source->suivants ;
+	destination->follows = source->follows ;
 	destination->precedents = source->precedents ;
 	destination->nbRoutes = source->nbRoutes ;
 	destination->maxRoute = source->maxRoute ;
@@ -223,7 +223,7 @@ void Individu::generalSplit()
 
 	isFitnessComputed = true ;
 	measureSol(); // calling a post-processing function which fills all other data structures and verifies the solution cost
-	computeSuivants (); // updating the predecessor and successor structure
+    computeFollows(); // updating the predecessor and successor structure
 }
 
 // Simple Split, does not necessarily respect the number of vehicles
@@ -447,6 +447,7 @@ void Individu::updateLS()
 		localSearch->ordreParcours[kk].clear() ; 
 
 		// we reset the "estPresent" values to false
+		// estPresent 当前客户节点 今天是否被服务
 		for (i=params->nbDepots ; i < params->nbClients + params->nbDepots ; i++)
 			localSearch->clients[kk][i].estPresent = false ;
 
@@ -456,6 +457,7 @@ void Individu::updateLS()
 		for (int jj = 0 ; jj < params->nombreVehicules[kk] ; jj ++ )
 		{
 			depot = params->ordreVehicules[kk][params->nombreVehicules[kk] - jj - 1].depotNumber ;
+			// i -> 前驱节点
 			i = (int)pred[kk][params->nombreVehicules[kk] - jj][j] ;
 
 			myDepot = &localSearch->depots[kk][params->nombreVehicules[kk] - jj - 1];
@@ -609,8 +611,8 @@ double Individu::distance(Individu * indiv2)
 		{
 			for (int s=1  ; s <= params->nbDays ; s++)
 			{
-				if (( suivants[j][s] != indiv2->suivants[j][s] || precedents[j][s] != indiv2->precedents[j][s] )
-					&& ( precedents[j][s] != indiv2->suivants[j][s] || suivants[j][s] != indiv2->precedents[j][s] ))
+				if ((follows[j][s] != indiv2->follows[j][s] || precedents[j][s] != indiv2->precedents[j][s] )
+					&& ( precedents[j][s] != indiv2->follows[j][s] || follows[j][s] != indiv2->precedents[j][s] ))
 					isIdentical = false ;
 			}
 		}
@@ -622,14 +624,14 @@ double Individu::distance(Individu * indiv2)
 	return ((double)note /(double)(2*params->nbClients)) ;
 }
 
-void Individu::computeSuivants ()
+void Individu::computeFollows ()
 {
 	int jj ;
 	for (int i=0 ; i< params->nbDepots + params->nbClients ; i++)
 	{
 		for (int k=1 ; k<= params->nbDays; k++)
 		{
-			suivants[i][k] = -1 ;
+            follows[i][k] = -1 ;
 			precedents[i][k] = -1 ;
 		}
 	}
@@ -639,12 +641,12 @@ void Individu::computeSuivants ()
 		if (chromT[k].size() != 0)
 		{
 			for (int i=0 ; i < (int)chromT[k].size()-1 ; i++)
-				suivants[chromT[k][i]][k] = chromT[k][i+1];
+                follows[chromT[k][i]][k] = chromT[k][i + 1];
 
 			for (int i=1 ; i < (int)chromT[k].size() ; i++)
 				precedents[chromT[k][i]][k] = chromT[k][i-1];
 
-			suivants[chromT[k][chromT[k].size()-1]][k] = params->ordreVehicules[k][0].depotNumber;
+            follows[chromT[k][chromT[k].size() - 1]][k] = params->ordreVehicules[k][0].depotNumber;
 			precedents[chromT[k][0]][k] = params->ordreVehicules[k][0].depotNumber;
 
 			// arranging those which are located at the beginning or end of a route
@@ -653,7 +655,7 @@ void Individu::computeSuivants ()
 				jj = chromR[k][i] ;
 				precedents[chromT[k][jj]][k] = params->ordreVehicules[k][0].depotNumber;
 				if (jj != 0)
-					suivants[chromT[k][jj-1]][k] = params->ordreVehicules[k][0].depotNumber;
+                    follows[chromT[k][jj - 1]][k] = params->ordreVehicules[k][0].depotNumber;
 			}
 		}
 	}
