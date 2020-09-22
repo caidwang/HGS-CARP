@@ -34,6 +34,7 @@ struct couple {
 
 // Used to store the list of allowable patterns for each customer
 struct pattern {
+    // 论文中的pattern是{1,2}这种形式的, 表示在第1,2个周期, 该点都会被服务, 那么代码中是如何体现多个period的
 	int pat;
 	int dep;
 	double cost;

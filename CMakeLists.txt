@@ -12,8 +12,8 @@ add_executable(HGS_CARP
         Program/commandline.h
         Program/Genetic.cpp
         Program/Genetic.h
-        Program/Individu.cpp
-        Program/Individu.h
+        Program/Individual.cpp
+        Program/Individual.h
         Program/LocalSearch.cpp
         Program/LocalSearch.h
         Program/main.cpp

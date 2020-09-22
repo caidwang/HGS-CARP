@@ -30,8 +30,8 @@ void Genetic::evolve (int maxIterNonProd, int nbRec)
 void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
 {
 	// Main code of the HGA 
-	Individu * parent1 ;
-	Individu * parent2 ;
+	Individual * parent1 ;
+	Individual * parent2 ;
 	int place, place2 ;
 	place2 = 10000 ;
 	nbIterNonProd = 1 ;
@@ -39,26 +39,26 @@ void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
 	int resultCross ;
 	string temp ;
 	double fitBeforeRepair ;
-	CoutSol bestSolFeasibility ;
-	clock_t debut = clock() ; // When iterating several time the HGA (e.g. PCARP, the time limit applies to one iteration -- fleet size or max distance value)
+	CostSol bestSolFeasibility ;
+	clock_t start = clock() ; // When iterating several time the HGA (e.g. PCARP, the time limit applies to one iteration -- fleet size or max distance value)
 
-	if (population->getIndividuBestValide() != NULL) bestSolFeasibility = population->getIndividuBestValide()->coutSol ;
-	else bestSolFeasibility = population->getIndividuBestInvalide()->coutSol ;
+	if (population->getIndividuBestValide() != NULL) bestSolFeasibility = population->getIndividuBestValide()->costSol ;
+	else bestSolFeasibility = population->getIndividuBestInvalide()->costSol ;
 	for (int i=0 ; i<population->invalides->nbIndiv ; i++)
-		if (population->invalides->individus[i]->coutSol.isBetterFeas(bestSolFeasibility)) bestSolFeasibility = population->invalides->individus[i]->coutSol ;
+		if (population->invalides->individus[i]->costSol.isBetterFeas(bestSolFeasibility)) bestSolFeasibility = population->invalides->individus[i]->costSol ;
 
-	rejeton->localSearch->nbTotalRISinceBeginning = 0 ;
-	rejeton->localSearch->nbTotalPISinceBeginning = 0 ;
+    offspring->localSearch->nbTotalRISinceBeginning = 0 ;
+    offspring->localSearch->nbTotalPISinceBeginning = 0 ;
 
 	cout << "| Start of GA | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiculesPerDep << " | " << endl ;
 
-	while (nbIterNonProd < maxIterNonProd && (clock() - debut <= ticks) && (!params->isSearchingFeasible || population->getIndividuBestValide() == NULL))
+	while (nbIterNonProd < maxIterNonProd && (clock() - start <= ticks) && (!params->isSearchingFeasible || population->getIndividuBestValide() == NULL))
 	{
 		// CROSSOVER
 		parent1 = population->getIndividuBinT(); // Pick two individuals per binary tournament
 		parent2 = population->getIndividuBinT(); // Pick two individuals per binary tournament
-		rejeton->recopieIndividu(rejeton,parent1); // Put them in adequate data structures
-		rejeton2->recopieIndividu(rejeton2,parent2); // Put them in adequate data structures
+		offspring->recopieIndividu(offspring, parent1); // Put them in adequate data structures
+		offspring2->recopieIndividu(offspring2, parent2); // Put them in adequate data structures
 
 		if (!params->periodique && !params->multiDepot) 
 			resultCross = crossOX(); // Pick OX crossover if its a single-period problem
@@ -66,25 +66,25 @@ void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
 			resultCross = crossPIX() ; // Otherwise PIX (see Vidal et al 2012 -- OR)
 
 		// SPLIT
-		rejeton->generalSplit();
+		offspring->generalSplit();
 
 		// LOCAL SEARCH
-		rejeton->updateLS();
-		rejeton->localSearch->runSearchTotal();
-		rejeton->updateIndiv();
-		population->updateNbValides(rejeton);
-		place = population->addIndividu(rejeton) ;
+		offspring->updateLS();
+		offspring->localSearch->runSearchTotal();
+		offspring->updateIndiv();
+		population->updateNbValides(offspring);
+		place = population->addIndividu(offspring) ;
 
 		// POSSIBLE REPAIR
-		if (!rejeton->estValide) 
+		if (!offspring->isValid)
 		{
-			fitBeforeRepair = rejeton->coutSol.evaluation ;
+			fitBeforeRepair = offspring->costSol.evaluation ;
 			if (rand() % 2 == 0) // 50% chance to do repair on an infeasible individual
 			{
-				reparer();
-				if (rejeton->coutSol.evaluation < fitBeforeRepair - 0.01 || rejeton->coutSol.evaluation > fitBeforeRepair + 0.01 || rejeton->estValide) 
-					place2 = population->addIndividu(rejeton) ;
-				if (rejeton->estValide)
+                repair();
+				if (offspring->costSol.evaluation < fitBeforeRepair - 0.01 || offspring->costSol.evaluation > fitBeforeRepair + 0.01 || offspring->isValid)
+					place2 = population->addIndividu(offspring) ;
+				if (offspring->isValid)
 					place = place2 ;
 				else 
 					place = min(place,place2);
@@ -92,14 +92,14 @@ void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
 		}
 
 		// SOME TRACES
-		if ( (rejeton->estValide && place == 0) || (rejeton->coutSol.isBetterFeas(bestSolFeasibility) && population->valides->nbIndiv == 0))
+		if ((offspring->isValid && place == 0) || (offspring->costSol.isBetterFeas(bestSolFeasibility) && population->valides->nbIndiv == 0))
 		{	
 			if (traces && population->valides->nbIndiv > 0) 
-				cout << "NEW BEST FEASIBLE " << place << " " << population->getIndividuBestValide()->coutSol.evaluation << " distance : " << rejeton->coutSol.distance << " nbRoutes : " << rejeton->coutSol.routes << " capaViol : " << rejeton->coutSol.capacityViol << " lengthViol : " << rejeton->coutSol.lengthViol << endl << endl ;
+				cout << "NEW BEST FEASIBLE " << place << " " << population->getIndividuBestValide()->costSol.evaluation << " distance : " << offspring->costSol.distance << " nbRoutes : " << offspring->costSol.routes << " capaViol : " << offspring->costSol.capacityViol << " lengthViol : " << offspring->costSol.lengthViol << endl << endl ;
 			if (traces && population->valides->nbIndiv == 0 ) 
-				cout << "NEW BEST INFEASIBLE "<< place << " " << rejeton->coutSol.evaluation                            << " distance : " << rejeton->coutSol.distance << " nbRoutes : " << rejeton->coutSol.routes << " capaViol : " << rejeton->coutSol.capacityViol << " lengthViol : " << rejeton->coutSol.lengthViol << endl << endl ;
-			if (rejeton->coutSol.isBetterFeas(bestSolFeasibility)) 
-				bestSolFeasibility = rejeton->coutSol ;
+				cout << "NEW BEST INFEASIBLE " << place << " " << offspring->costSol.evaluation << " distance : " << offspring->costSol.distance << " nbRoutes : " << offspring->costSol.routes << " capaViol : " << offspring->costSol.capacityViol << " lengthViol : " << offspring->costSol.lengthViol << endl << endl ;
+			if (offspring->costSol.isBetterFeas(bestSolFeasibility))
+				bestSolFeasibility = offspring->costSol ;
 			nbIterNonProd = 1 ; 
 		}
 		else nbIterNonProd ++ ;
@@ -120,11 +120,11 @@ void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
 		if (traces && nbIter % 500 == 0)
 		{
 			population->afficheEtat(nbIter);
-			cout << " | NbTotalMovesLS : (RI) " << rejeton->localSearch->nbTotalRISinceBeginning << " | (PI) " << rejeton->localSearch->nbTotalPISinceBeginning << " | " << endl ;
-			cout << " | interSwap " << rejeton->localSearch->nbInterSwap ;
-			cout << " | intraSwap " << rejeton->localSearch->nbIntraSwap ;
-			cout << " | inter2opt " << rejeton->localSearch->nbInter2Opt ;
-			cout << " | intra2opt " << rejeton->localSearch->nbIntra2Opt ;
+			cout << " | NbTotalMovesLS : (RI) " << offspring->localSearch->nbTotalRISinceBeginning << " | (PI) " << offspring->localSearch->nbTotalPISinceBeginning << " | " << endl ;
+			cout << " | interSwap " << offspring->localSearch->nbInterSwap ;
+			cout << " | intraSwap " << offspring->localSearch->nbIntraSwap ;
+			cout << " | inter2opt " << offspring->localSearch->nbInter2Opt ;
+			cout << " | intra2opt " << offspring->localSearch->nbIntra2Opt ;
 			cout << " | " << endl ;
 			cout << " | CPU Time : " <<  (double)clock()/(double)CLOCKS_PER_SEC << " seconds " << endl ;
 			cout << endl ;
@@ -146,13 +146,13 @@ void Genetic::evolveILS ()
 	int nbILS = 100 ;
 	int nbCHILD = 50 ;
 	bool isFirstLoop ;
-	Individu * parent ;
+	Individual * parent ;
 	clock_t timeBest2 ;
-	rejeton->localSearch->nbTotalRISinceBeginning = 0 ;
-	rejeton->localSearch->nbTotalPISinceBeginning = 0 ;
+    offspring->localSearch->nbTotalRISinceBeginning = 0 ;
+    offspring->localSearch->nbTotalPISinceBeginning = 0 ;
 	nbIter = 0 ;
 	clock_t debut = clock();
-	rejetonBestFoundAll->coutSol.evaluation = 1.e30 ;
+    offspringBestFoundAll->costSol.evaluation = 1.e30 ;
 
 	cout << "| Debut evolution ILS | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiculesPerDep << " | " << endl ;
 
@@ -162,10 +162,10 @@ void Genetic::evolveILS ()
 		cout << endl  << "------------ RESTART ---------" << endl << endl ;
 		params->penalityCapa = 50 ;
 		params->penalityLength = 50;
-		Individu * myIndiv = new Individu(params, 1.0) ; 
-		rejetonP1->recopieIndividu(rejetonP1,myIndiv);
+		Individual * myIndiv = new Individual(params, 1.0) ;
+		offspringP1->recopieIndividu(offspringP1, myIndiv);
 		delete myIndiv ;
-		rejetonBestFound->coutSol.evaluation = 1.e30 ;
+        offspringBestFound->costSol.evaluation = 1.e30 ;
 		isFirstLoop = true ;
 		
 		for (int nbGenerationNonProd = 0 ; nbGenerationNonProd < nbILS && (clock() - debut <= ticks) ; nbGenerationNonProd ++)
@@ -174,7 +174,7 @@ void Genetic::evolveILS ()
 			{
 				parent = population->getIndividuBestValide();
 				if (parent == NULL) parent = population->getIndividuBestInvalide();
-				rejetonP1->recopieIndividu(rejetonP1,parent);
+				offspringP1->recopieIndividu(offspringP1, parent);
 			}
 			else 
 				isFirstLoop = false ;
@@ -185,32 +185,32 @@ void Genetic::evolveILS ()
 			for (int i=0 ; i < nbCHILD ; i++)
 			{
 				// SHAKING
-				rejeton->recopieIndividu(rejeton,rejetonP1);
-				rejeton->shakingSwap(2 + (int)params->nbClients/200);
-				rejeton->generalSplit();
+				offspring->recopieIndividu(offspring, offspringP1);
+				offspring->shakingSwap(2 + (int)params->nbClients / 200);
+				offspring->generalSplit();
 
 				// LOCAL SEARCH
-				rejeton->updateLS();
-				rejeton->localSearch->runSearchTotal();
-				rejeton->updateIndiv();
-				population->updateNbValides(rejeton);
+				offspring->updateLS();
+				offspring->localSearch->runSearchTotal();
+				offspring->updateIndiv();
+				population->updateNbValides(offspring);
 				// If the solution is infeasible, do a LS with higher penalty to restore feasibiliy
-				if (!rejeton->estValide) reparer();
-				population->addIndividu(rejeton) ;
+				if (!offspring->isValid) repair();
+				population->addIndividu(offspring) ;
 
 				// Checking if its a solution improvement
-				if (rejeton->estValide && rejeton->coutSol.evaluation < rejetonBestFound->coutSol.evaluation - 0.001) 
+				if (offspring->isValid && offspring->costSol.evaluation < offspringBestFound->costSol.evaluation - 0.001)
 				{	
 					nbGenerationNonProd = -1 ;
-					rejetonBestFound->recopieIndividu(rejetonBestFound,rejeton);
-					if (rejetonBestFound->coutSol.evaluation < rejetonBestFoundAll->coutSol.evaluation - 0.001)
+					offspringBestFound->recopieIndividu(offspringBestFound, offspring);
+					if (offspringBestFound->costSol.evaluation < offspringBestFoundAll->costSol.evaluation - 0.001)
 					{
-						cout << "NEW BEST EVER : " << rejetonBestFound->coutSol.evaluation << endl ;
-						rejetonBestFoundAll->recopieIndividu(rejetonBestFoundAll,rejetonBestFound);
+						cout << "NEW BEST EVER : " << offspringBestFound->costSol.evaluation << endl ;
+						offspringBestFoundAll->recopieIndividu(offspringBestFoundAll, offspringBestFound);
 						timeBest2 = population->timeBest ;
 					}
 					else
-						cout << "NEW BEST      : " << rejeton->coutSol.evaluation << endl ;
+						cout << "NEW BEST      : " << offspring->costSol.evaluation << endl ;
 				}
 
 				// Regular adaptation of penalty parameters (every 30 LS)
@@ -222,11 +222,11 @@ void Genetic::evolveILS ()
 			if (nbIter % 500 == 0)
 			{
 				population->afficheEtat(nbIter);
-				cout << " | NbTotalMovesLS : (RI) " << rejeton->localSearch->nbTotalRISinceBeginning << " | (PI) " << rejeton->localSearch->nbTotalPISinceBeginning << " | " << endl ;
-				cout << " | interSwap " << rejeton->localSearch->nbInterSwap ;
-				cout << " | intraSwap " << rejeton->localSearch->nbIntraSwap ;
-				cout << " | inter2opt " << rejeton->localSearch->nbInter2Opt ;
-				cout << " | intra2opt " << rejeton->localSearch->nbIntra2Opt ;
+				cout << " | NbTotalMovesLS : (RI) " << offspring->localSearch->nbTotalRISinceBeginning << " | (PI) " << offspring->localSearch->nbTotalPISinceBeginning << " | " << endl ;
+				cout << " | interSwap " << offspring->localSearch->nbInterSwap ;
+				cout << " | intraSwap " << offspring->localSearch->nbIntraSwap ;
+				cout << " | inter2opt " << offspring->localSearch->nbInter2Opt ;
+				cout << " | intra2opt " << offspring->localSearch->nbIntra2Opt ;
 				cout << " | " << endl ;
 				cout << " | CPU Time : " <<  (double)clock()/(double)CLOCKS_PER_SEC << " seconds " << endl ;
 				cout << endl ;
@@ -234,19 +234,19 @@ void Genetic::evolveILS ()
 		}
 	}
 
-	// fin de l'algorithme , diverses informations affich�es
+	// end of the algorithm, various information displayed
 	if (traces) 
 	{
 		cout << "temps passe : " << clock() << endl ;
 		cout << "fin evolution ILS, nombre d'iterations : " << nbIter << endl ;
 	}
 
-	// ajouter la meilleure solution trouv�e dans la population pour l'�criture en fin d'algorithme
-	population->addIndividu(rejetonBestFoundAll);
+	// add the best solution found in the population for the writing at the end of the algorithm
+	population->addIndividu(offspringBestFoundAll);
 	population->timeBest = timeBest2 ; // need to correct the time to best solution.
 }
 
-void Genetic::reparer ()
+void Genetic::repair ()
 {
 	double temp, temp2  ;
 
@@ -256,24 +256,24 @@ void Genetic::reparer ()
 	// First Tentative of Repair
 	params->penalityCapa *= 10 ;
 	params->penalityLength *= 10 ;
-	rejeton->updateLS();
-	rejeton->localSearch->runSearchTotal();
-	rejeton->updateIndiv();
+	offspring->updateLS();
+	offspring->localSearch->runSearchTotal();
+	offspring->updateIndiv();
 
 	// If the first tentative failed, second tentative with higher penalty
-	if (!rejeton->estValide) 
+	if (!offspring->isValid)
 	{
 		params->penalityCapa *= 10 ;
 		params->penalityLength *= 10 ;
-		rejeton->generalSplit();
-		rejeton->updateLS();
-		rejeton->localSearch->runSearchTotal();
-		rejeton->updateIndiv();
+		offspring->generalSplit();
+		offspring->updateLS();
+		offspring->localSearch->runSearchTotal();
+		offspring->updateIndiv();
 	}
 
 	params->penalityCapa = temp ;
 	params->penalityLength = temp2 ;
-	rejeton->measureSol();
+	offspring->measureSol();
 }
 
 void Genetic::gererPenalites ()
@@ -328,18 +328,18 @@ int Genetic::crossOX ()
 	// we keep the elements from "debut" to "end"
 	while ((j % params->nbClients) != ((fin + 1) % params->nbClients))
 	{ 
-		freqClient[rejeton->chromT[1][j % params->nbClients]] = 0 ;
+		freqClient[offspring->chromT[1][j % params->nbClients]] = 0 ;
 		j ++ ;
 	}
 
 	// We fill the rest of the elements in the order of the second parent
 	for (int i=1 ; i <= params->nbClients ; i++)
 	{
-		temp = rejeton2->chromT[1][(fin + i) % params->nbClients] ;
-		tempSuiv = rejeton2->chromT[1][(fin + i + 1) % params->nbClients] ;
+		temp = offspring2->chromT[1][(fin + i) % params->nbClients] ;
+		tempSuiv = offspring2->chromT[1][(fin + i + 1) % params->nbClients] ;
 		if (freqClient[temp] == 1)
 		{
-			rejeton->chromT[1][j % params->nbClients] = temp ;
+            offspring->chromT[1][j % params->nbClients] = temp ;
 			j ++ ;
 		}
 	}
@@ -349,10 +349,10 @@ int Genetic::crossOX ()
 
 int Genetic::crossPIX ()
 {
-	vector < int > vide, garder, joursPerturb, tableauFin, tableauEtat ;
-	vector < vector <int> > garder2 ;
+	vector < int > empty, keep, joursPerturb, boardEnd, boardStatus ; // vide -- 空闲的  garder -- 保存 joursPerturb -- 扰动日期
+	vector < vector <int> > keep2 ;
 	int jj,i,ii,j,temp,size ;
-	int debut, fin, day ;
+	int start, end, day ;
 	int j1,j2 ;
 	int placeInsertion ;
 
@@ -360,8 +360,8 @@ int Genetic::crossPIX ()
 	for (i=0 ; i < params->nbClients + params->nbDepots ; i++ )
 	{
 		freqClient[i] = params->cli[i].freq ;
-		rejeton->chromP[i].pat = 0 ;
-		rejeton->chromP[i].dep = -1 ;
+        offspring->chromP[i].pat = 0 ;
+        offspring->chromP[i].dep = -1 ;
 	}
 
 
@@ -387,43 +387,43 @@ int Genetic::crossPIX ()
 	}
 
 	for (int k = 0 ; k <= params->nbDays ; k ++ ) 
-		garder2.push_back(vide);
+		keep2.push_back(empty);
 
 	// Inheriting the visits
 	for (int k = 0 ; k < params->nbDays ; k ++ )
 	{
 		day = joursPerturb[k];
 
-		// First case, we copy a segment (these visits will be temporarily kept in the data structure "garder2")
-		if (k < j1 && !rejeton->chromT[day].empty())
+		// First case, we copy a segment (these visits will be temporarily kept in the data structure "keep2")
+		if (k < j1 && !offspring->chromT[day].empty())
 		{
-			debut = (int)(rand() % rejeton->chromT[day].size()) ;
-			fin = (int)(rand() % rejeton->chromT[day].size()) ;
-			tableauFin.push_back(fin);
-			j = debut ;
-			while ( j != ((fin + 1) % rejeton->chromT[day].size()) )
+            start = (int)(rand() % offspring->chromT[day].size()) ;
+            end = (int)(rand() % offspring->chromT[day].size()) ;
+			boardEnd.push_back(end);
+			j = start ;
+			while ( j != ((end + 1) % offspring->chromT[day].size()) )
 			{
-				freqClient[rejeton->chromT[day][j]] -= 1 ;
-				rejeton->chromP[rejeton->chromT[day][j]].pat += (int)pow((float)2,(int)((params->nbDays-day)%params->ancienNbDays)) ;
-				rejeton->chromP[rejeton->chromT[day][j]].dep = (day-1)/params->ancienNbDays ;
-				garder2[day].push_back(rejeton->chromT[day][j]) ;
-				j = (j+1) % rejeton->chromT[day].size() ;
+				freqClient[offspring->chromT[day][j]] -= 1 ;
+                offspring->chromP[offspring->chromT[day][j]].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
+                offspring->chromP[offspring->chromT[day][j]].dep = (day - 1) / params->formerNbDays ;
+				keep2[day].push_back(offspring->chromT[day][j]) ;
+				j = (j+1) % offspring->chromT[day].size() ;
 			}
-			rejeton->chromT[day].clear();
+			offspring->chromT[day].clear();
 		}
 		else if (k < j2) // Second case, we copy nothing on this day
 		{
-			rejeton->chromT[day].clear() ;
-			tableauFin.push_back(-1);
+			offspring->chromT[day].clear() ;
+			boardEnd.push_back(-1);
 		}
 		else // Third case, we copy everything on this day
 		{
-			tableauFin.push_back(0);
-			for (j=0 ; j < (int)rejeton->chromT[day].size() ; j++)
+			boardEnd.push_back(0);
+			for (j=0 ; j < (int)offspring->chromT[day].size() ; j++)
 			{
-				freqClient[rejeton->chromT[day][j]] -= 1 ;
-				rejeton->chromP[rejeton->chromT[day][j]].pat += (int)pow((float)2,(int)((params->nbDays-day)%params->ancienNbDays)) ;
-				rejeton->chromP[rejeton->chromT[day][j]].dep = (day-1)/params->ancienNbDays ;
+				freqClient[offspring->chromT[day][j]] -= 1 ;
+                offspring->chromP[offspring->chromT[day][j]].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
+                offspring->chromP[offspring->chromT[day][j]].dep = (day - 1) / params->formerNbDays ;
 			}
 		}
 	}
@@ -432,68 +432,68 @@ int Genetic::crossPIX ()
 	for (int k = 0 ; k < params->nbDays ; k ++ )
 	{
 		day = joursPerturb[k] ;
-		fin = tableauFin[k] ;
+        end = boardEnd[k] ;
 		if (k < j2)
 		{
-			for (i=0 ; i < (int)rejeton2->chromT[day].size() ; i++)
+			for (i=0 ; i < (int)offspring2->chromT[day].size() ; i++)
 			{
-				ii = rejeton2->chromT[day][ (i + fin + 1) % (int)rejeton2->chromT[day].size() ] ;
+				ii = offspring2->chromT[day][(i + end + 1) % (int)offspring2->chromT[day].size() ] ;
 				if (freqClient[ii] != 0
-					&& params->cli[ii].jourSuiv[rejeton->chromP[ii].pat][(day-1)%params->ancienNbDays+1] == (int)((day-1)%params->ancienNbDays+1) 
-					&& ( rejeton->chromP[ii].dep == -1 || rejeton->chromP[ii].dep == (day-1)/params->ancienNbDays ))
+					&& params->cli[ii].jourSuiv[offspring->chromP[ii].pat][(day - 1) % params->formerNbDays + 1] == (int)((day - 1) % params->formerNbDays + 1)
+					&& (offspring->chromP[ii].dep == -1 || offspring->chromP[ii].dep == (day - 1) / params->formerNbDays ))
 				{
-					rejeton->chromT[day].push_back(ii);
+					offspring->chromT[day].push_back(ii);
 					freqClient[ii] -= 1 ;
-					rejeton->chromP[ii].pat += (int)pow((float)2,(int)((params->nbDays-day)%params->ancienNbDays)) ;
-					rejeton->chromP[ii].dep = (day-1)/params->ancienNbDays ;
+                    offspring->chromP[ii].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
+                    offspring->chromP[ii].dep = (day - 1) / params->formerNbDays ;
 				}
 			}
 		}
 	}
 
-	// we complete with the elements of garder2 (which come from the first parent for the days where the parents are mixed)
+	// we complete with the elements of keep2 (which come from the first parent for the days where the parents are mixed)
 	for (int k=1 ; k<=params->nbDays ; k++)
 	{
-		garder.clear();
+		keep.clear();
 		// Choose a random place of insertion
-		size = (int)rejeton->chromT[k].size() ;
+		size = (int)offspring->chromT[k].size() ;
 		if (size != 0) placeInsertion = rand() % size ; 
 		else placeInsertion = 0 ;
 		for (int iii=placeInsertion ; iii <  size ; iii ++)
-			garder.push_back(rejeton->chromT[k][iii]);
+			keep.push_back(offspring->chromT[k][iii]);
 		for (int iii=placeInsertion ; iii <  size ; iii ++)
-			rejeton->chromT[k].pop_back();
-		for (int iii=0 ; iii < (int)garder2[k].size() ; iii ++)
-			rejeton->chromT[k].push_back(garder2[k][iii]);
-		for (int iii=0 ; iii < (int)garder.size() ; iii ++)
-			rejeton->chromT[k].push_back(garder[iii]);
+			offspring->chromT[k].pop_back();
+		for (int iii=0 ; iii < (int)keep2[k].size() ; iii ++)
+			offspring->chromT[k].push_back(keep2[k][iii]);
+		for (int iii=0 ; iii < (int)keep.size() ; iii ++)
+			offspring->chromT[k].push_back(keep[iii]);
 	}
 
-	rejeton->toPlace.clear();
+	offspring->toPlace.clear();
 	// We gather in "toPlace" those elements with missing visits
 	for (i=0 ; i < params->nbClients + params->nbDepots ; i++ )
 	{
 		if (freqClient[i] > 0)
 		{
 			for (j=0 ; j< freqClient[i] ; j++)
-				rejeton->toPlace.push_back(i);
+				offspring->toPlace.push_back(i);
 		}
 	}
 
 	// We randomize toPlace
-	for (i = 0 ; i < (int)rejeton->toPlace.size() ; i++)
+	for (i = 0 ; i < (int)offspring->toPlace.size() ; i++)
 	{
-		jj = i + rand() % ((int)rejeton->toPlace.size() - i) ;
-		temp = rejeton->toPlace[i] ;
-		rejeton->toPlace[i] = rejeton->toPlace[jj] ;
-		rejeton->toPlace[jj] = temp ;
+		jj = i + rand() % ((int)offspring->toPlace.size() - i) ;
+		temp = offspring->toPlace[i] ;
+        offspring->toPlace[i] = offspring->toPlace[jj] ;
+        offspring->toPlace[jj] = temp ;
 	}
 
 	// We call Split to obtain a full solution
-	rejeton->generalSplit();
-	rejeton->updateLS();
-	rejeton->localSearch->placeManquants(); // and we perform a least-cost insertion of the missing visits
-	rejeton->updateIndiv();
+	offspring->generalSplit();
+	offspring->updateLS();
+	offspring->localSearch->placeManquants(); // and we perform a least-cost insertion of the missing visits
+	offspring->updateIndiv();
 
 	return 0 ;
 }
@@ -505,22 +505,22 @@ params(params) , population(population) , ticks(ticks) , traces(traces)
 		freqClient.push_back(params->cli[i].freq);
 
 	// Creating the Individuals that serve to perform the Local Search and other operations
-	rejeton = new Individu (params, true) ; 
-	rejeton2 = new Individu(params, true) ; 
-	rejetonP1 = new Individu(params, true) ; 
-	rejetonP2 = new Individu(params, true) ; 
-	rejetonBestFound = new Individu(params, true) ; 
-	rejetonBestFoundAll = new Individu(params, true) ; 
-	rejeton->localSearch = new LocalSearch(params,rejeton) ;
+	offspring = new Individual (params, true) ;
+    offspring2 = new Individual(params, true) ;
+    offspringP1 = new Individual(params, true) ;
+    offspringP2 = new Individual(params, true) ;
+    offspringBestFound = new Individual(params, true) ;
+    offspringBestFoundAll = new Individual(params, true) ;
+    offspring->localSearch = new LocalSearch(params, offspring) ;
 } 
 
 Genetic::~Genetic(void)
 { 
-	delete rejeton ;
-	delete rejeton2 ;
-	delete rejetonP1 ;
-	delete rejetonP2 ;
-	delete rejetonBestFound ;
-	delete rejetonBestFoundAll ;
+	delete offspring ;
+	delete offspring2 ;
+	delete offspringP1 ;
+	delete offspringP2 ;
+	delete offspringBestFound ;
+	delete offspringBestFoundAll ;
 }
 

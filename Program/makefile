@@ -37,7 +37,7 @@ $(TARGETDIR)/commandline.o: commandline.h commandline.cpp
 $(TARGETDIR)/Genetic.o: Genetic.h Genetic.cpp
 	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c Genetic.cpp -o $(TARGETDIR)/Genetic.o
 
-$(TARGETDIR)/Individu.o: Individu.h Individu.cpp
+$(TARGETDIR)/Individu.o: Individual.h Individual.cpp
 	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c Individu.cpp -o $(TARGETDIR)/Individu.o
 
 $(TARGETDIR)/LocalSearch.o: LocalSearch.h LocalSearch.cpp

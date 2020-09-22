@@ -24,7 +24,7 @@
 #include <vector>
 #include <time.h>
 #include "Noeud.h"
-#include "Individu.h"
+#include "Individual.h"
 
 using namespace std ;
 
@@ -32,7 +32,7 @@ using namespace std ;
 struct SousPop
 {
 	// Individuals
-	vector <Individu *> individus ;
+	vector <Individual *> individus ;
 
 	// Number of Individuals
 	int nbIndiv ;
@@ -49,11 +49,11 @@ class Population
    list <bool> listeValiditeTemps ;
 
    // Education procedure (LS)
-   void education(Individu * indiv);
+   void education(Individual * indiv);
 
    // Place an individual in the population
    // Returns its position
-   int placeIndividu (SousPop * pop, Individu * indiv);
+   int placeIndividu (SousPop * pop, Individual * indiv);
 
    public:
 
@@ -65,16 +65,16 @@ class Population
 
    // Auxiliary data structure (Individual) with all local search data structures
    // To do the LS on a given individual, we simply copy in this individual and run the LS there.
-   Individu * trainer;
+   Individual * trainer;
 	   
    // check if there is already a solution with the same fitness in the population
-   bool fitExist ( SousPop * pop, Individu * indiv ) ;
+   bool fitExist (SousPop * pop, Individual * indiv ) ;
 
    // compute the biased fitness of the individuals in the population
    void evalExtFit(SousPop * pop);
 
    // add an individual in the population
-   int addIndividu (Individu * indiv);
+   int addIndividu (Individual * indiv);
 
    // add all individuals from another population
    int addAllIndividus (Population * pop);
@@ -86,7 +86,7 @@ class Population
    int selectCompromis (SousPop * souspop) ; 
 
    // update the table of distance (Hamming distance) between individuals to know their proximity
-   void updateProximity (SousPop * pop, Individu * indiv);
+   void updateProximity (SousPop * pop, Individual * indiv);
 
    // Diversification procedure (replace a large part of the population by new random solutions)
    void diversify ();
@@ -99,16 +99,16 @@ class Population
    SousPop * invalides;
 
    // Get one individual per binary tournament
-   Individu * getIndividuBinT ();
+   Individual * getIndividuBinT ();
 
    // Get one individual with uniform probability in a percentage of the best
-   Individu * getIndividuPourc (int pourcentage);
+   Individual * getIndividuPourc (int pourcentage);
 
    // Get best feasible individual
-   Individu * getIndividuBestValide ();
+   Individual * getIndividuBestValide ();
 
    // Get best infeasible individual
-   Individu * getIndividuBestInvalide ();
+   Individual * getIndividuBestInvalide ();
 
    // when the penalty coefficient change, need to recompute properly the fitness of the individuals in the population
    void validatePen (SousPop * souspop);
@@ -150,7 +150,7 @@ class Population
    void afficheEtat(int NbIter);
 
    // update the count of valid individuals
-   void updateNbValides (Individu * indiv);
+   void updateNbValides (Individual * indiv);
 
    // update the age of the individuals
    void updateAge ();

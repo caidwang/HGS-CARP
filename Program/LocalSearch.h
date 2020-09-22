@@ -75,7 +75,7 @@ private:
 	bool rechercheTerminee ;
 
 	// Access to the associated individual
-	Individu * individu ;
+	Individual * individu ;
 
 	// Small pointers and variables which are used during the LS
 	Noeud * noeudU ;
@@ -170,7 +170,7 @@ public:
 	// to avoid testing them again as long as nothing has been modified
 	void nodeTestedForEachRoute (int cli, int day);
 
-	/* O(n²) VERSION OF EJECTION CHAINS */
+	/* O(nï¿½) VERSION OF EJECTION CHAINS */
 	// Picks a random order for the routes
 	// relies on some auxiliary graph structures to solve a shortest path sub-problem */
 	int ec_nbRoutes ;
@@ -200,7 +200,7 @@ public:
 	LocalSearch();
 
     // Constructor with all data structures
-	LocalSearch(Params * params, Individu * individu);
+	LocalSearch(Params * params, Individual * individu);
 
 	~LocalSearch(void);
 };

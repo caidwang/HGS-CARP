@@ -21,7 +21,7 @@
 
 #include "Population.h"
 #include "Params.h"
-#include "Individu.h"
+#include "Individual.h"
 #include "time.h"
 #include <stdlib.h>
 #include <stdio.h> 
@@ -55,12 +55,12 @@ public:
 	// working individuals (for the local search and crossover)
 	// to work on some solutions we first create a copy in this kind of individuals
 	// because the individual used for storage in the population do not contain all search data structures
-	Individu * rejeton ; 
-	Individu * rejeton2 ;
-	Individu * rejetonP1 ;
-	Individu * rejetonP2 ;
-	Individu * rejetonBestFound ;
-	Individu * rejetonBestFoundAll ;
+	Individual * offspring ; // 后代
+	Individual * offspring2 ;
+	Individual * offspringP1 ;
+	Individual * offspringP2 ;
+	Individual * offspringBestFound ;
+	Individual * offspringBestFoundAll ;
 
 	// Pointer towards the parameters of the problem
 	Params * params ;
@@ -75,7 +75,7 @@ public:
 	void evolveILS () ;    
 
 	// Repairing an infeasible solution
-	void reparer ();
+	void repair ();
 
 	// OX Crossover
 	int crossOX ();
@@ -96,7 +96,7 @@ public:
 
 	// Function used in the decomposition phases (single depot and period).
 	// Create some subproblems with a restricted number of customers
-	void improve_decompRoutes (int maxIterNonProd, Individu * indiv, int grainSize, Population * pop, int nbRec);
+	void improve_decompRoutes (int maxIterNonProd, Individual * indiv, int grainSize, Population * pop, int nbRec);
 
 	// Constructor
 	Genetic(Params * params,Population * population, clock_t ticks, bool traces);

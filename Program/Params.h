@@ -121,7 +121,7 @@ public:
 
 	// number of days
 	int nbDays ;
-	int ancienNbDays ; // copy of the number of days
+	int formerNbDays ; // copy of the number of days
 
 	// number of vehicles per depot
 	int nbVehiculesPerDep ;

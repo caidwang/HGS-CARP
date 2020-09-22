@@ -17,7 +17,7 @@
 //  ---------------------------------------------------------------------- */
 
 #include "SeqData.h"
-#include "Individu.h" 
+#include "Individual.h"
 
 // Set this flag to true when dealing with problems containing turn penalties
 #ifndef TURN_PENALTIES
@@ -26,7 +26,7 @@
 /* ROUTE EVALUATION PROCEDURES FOR CARP, PCARP, NEARP and MM-kWRPP */
 /* --------------------------------------------------------------- */
 
-void SeqData::initialisation(int Ucour, Params * mesParams, Individu * myIndiv, int day, bool isForPathTracking)
+void SeqData::initialisation(int Ucour, Params * mesParams, Individual * myIndiv, int day, bool isForPathTracking)
 {
 	params = mesParams ;
 	load = params->cli[Ucour].demandPatDay[myIndiv->chromP[Ucour].pat][day] ;
@@ -52,7 +52,7 @@ void SeqData::initialisation(int Ucour, Params * mesParams, Individu * myIndiv, 
 	lastNode = Ucour ;
 }
 
-void SeqData::concatOneAfter(SeqData * seq,int Vcour, Individu * myIndiv, int day) 
+void SeqData::concatOneAfter(SeqData * seq, int Vcour, Individual * myIndiv, int day)
 {
 	Client * lastCli = &params->cli[seq->lastNode] ;
 	Client * vCourCli = &params->cli[Vcour] ;
@@ -86,7 +86,7 @@ void SeqData::concatOneAfter(SeqData * seq,int Vcour, Individu * myIndiv, int da
 	lastNode = Vcour ;
 }
 
-void SeqData::concatOneAfterWithPathTracking(SeqData * seq,int Vcour, Individu * myIndiv, int day)
+void SeqData::concatOneAfterWithPathTracking(SeqData * seq, int Vcour, Individual * myIndiv, int day)
 {
 	Client * lastCli = &params->cli[seq->lastNode] ;
 	Client * vCourCli = &params->cli[Vcour] ;
@@ -133,7 +133,7 @@ void SeqData::concatOneAfterWithPathTracking(SeqData * seq,int Vcour, Individu *
 }
 
 
-void SeqData::concatOneBefore(SeqData * seq,int Vcour, Individu * myIndiv, int day) 
+void SeqData::concatOneBefore(SeqData * seq, int Vcour, Individual * myIndiv, int day)
 { 
 	Client * firstCli = &params->cli[seq->firstNode] ;
 	Client * vCourCli = &params->cli[Vcour] ;
@@ -464,7 +464,7 @@ SeqData::SeqData()
 SeqData::~SeqData()
 {}
 
-void SeqData::initialisation(int Ucour, Params * mesParams, Individu * myIndiv, int day,bool isForPathTracking)
+void SeqData::initialisation(int Ucour, Params * mesParams, Individual * myIndiv, int day,bool isForPathTracking)
 {
 	params = mesParams ;
 	load = params->cli[Ucour].demandPatDay[myIndiv->chromP[Ucour].pat][day] ;
@@ -511,7 +511,7 @@ void SeqData::initialisation(int Ucour, Params * mesParams, Individu * myIndiv, 
 	lastNode = Ucour ;
 }
 
-void SeqData::concatOneAfter(SeqData * seq, int Vcour, Individu * myIndiv, int day)
+void SeqData::concatOneAfter(SeqData * seq, int Vcour, Individual * myIndiv, int day)
 {
 	double tempc ;
 	Client * firstCli = &params->cli[seq->firstNode] ;
@@ -543,7 +543,7 @@ void SeqData::concatOneAfter(SeqData * seq, int Vcour, Individu * myIndiv, int d
 	lastNode = Vcour ;
 }
 
-void SeqData::concatOneAfterWithPathTracking(SeqData * seq, int Vcour, Individu * myIndiv, int day)
+void SeqData::concatOneAfterWithPathTracking(SeqData * seq, int Vcour, Individual * myIndiv, int day)
 {
 	double tempc ;
 	Client * firstCli = &params->cli[seq->firstNode] ;
@@ -585,7 +585,7 @@ void SeqData::concatOneAfterWithPathTracking(SeqData * seq, int Vcour, Individu 
 }
 
 
-void SeqData::concatOneBefore(SeqData * seq,int Vcour, Individu * myIndiv, int day)
+void SeqData::concatOneBefore(SeqData * seq,int Vcour, Individual * myIndiv, int day)
 { 
 	double tempc ;
 	Client * firstCli = &params->cli[seq->firstNode] ;

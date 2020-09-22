@@ -20,7 +20,7 @@
 #define SEQDATA_H 
 
 #include "Params.h" 
-class Individu ;
+class Individual ;
 
 class SeqData
 {
@@ -75,10 +75,10 @@ public:
 	// The two last arguments of these functions (individual and day) are not needed in the CARP
 	// But here we had to extend the code to the PCARP, where the evaluation of a route has to be done in a context
 	// as the choice of visit days influences the delivery quantity on each day
-	void initialisation(int Ucour, Params * mesParams, Individu * myIndiv, int day, bool isForPathTracking);
-	void concatOneAfter(SeqData * seq,int Vcour, Individu * myIndiv, int day);
-	void concatOneAfterWithPathTracking(SeqData * seq,int Vcour, Individu * myIndiv, int day); // used to track the path when printing the final solution
-	void concatOneBefore(SeqData * seq,int Vcour, Individu * myIndiv, int day);
+	void initialisation(int Ucour, Params * mesParams, Individual * myIndiv, int day, bool isForPathTracking);
+	void concatOneAfter(SeqData * seq, int Vcour, Individual * myIndiv, int day);
+	void concatOneAfterWithPathTracking(SeqData * seq, int Vcour, Individual * myIndiv, int day); // used to track the path when printing the final solution
+	void concatOneBefore(SeqData * seq, int Vcour, Individual * myIndiv, int day);
 	
 	// Route evaluation evaluators
 	double evaluation(SeqData * seq1, Vehicle * vehicle);

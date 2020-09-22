@@ -29,7 +29,7 @@ using namespace std ;
 class LocalSearch ;
 
 // Structure used to keep the cost of a solution
-struct CoutSol {
+struct CostSol {
 
 	// value of the fitness, including the penalties for possible violations of the constraints
 	double evaluation ;
@@ -48,7 +48,7 @@ struct CoutSol {
 
 
 	// Constructor
-	CoutSol(){
+	CostSol(){
 		evaluation = 0 ;
 		distance = 0 ;
 		capacityViol = 0 ;
@@ -57,7 +57,7 @@ struct CoutSol {
 	}
 
 	// says if "this" is better in terms of feasibility than "c2"
-	bool isBetterFeas(CoutSol c2){
+	bool isBetterFeas(CostSol c2){
 		bool isBetter = false ;
 		bool isDominated = false ;
 		if (capacityViol > c2.capacityViol + 0.0001) isDominated = true ;
@@ -68,19 +68,19 @@ struct CoutSol {
 	}
 };
 
-// preliminary declaration, because proxData depends on Individu
-class Individu ;
+// preliminary declaration, because proxData depends on Individual
+class Individual ;
 
 // data about the proximity of an Individual with regards to the others in the population.
 struct proxData {
 	// Individual
-	Individu * indiv ;
+	Individual * indiv ;
 
 	// Its distance to the others
 	double dist ;
 };
 
-class Individu
+class Individual
 {
 
 public:
@@ -92,7 +92,7 @@ public:
 	int age ;
 
 	// fitness of the individual
-	double fitnessEtendu ;
+	double fitnessExtended ;
 
 	// rank in terms of diversity
 	float divRank ;
@@ -101,7 +101,7 @@ public:
 	float fitRank ;
 
 	// evaluation of the solution
-	CoutSol coutSol ;
+	CostSol costSol ;
 
 	// number of routes (if computed)
 	int nbRoutes ;
@@ -128,44 +128,44 @@ public:
 	// follows[client][day] gives the previous customer in the considered day
 	// Used to compute the Hamming distance between solutions
 	// if the customer does not exist in this day, returns -1
-	vector < vector<int> > precedents ;
+	vector < vector<int> > previous ;
 
-	// computing the follows and precedents tables
+	// computing the follows and previous tables
 	void computeFollows();
 
 	// working table for split (dynamic programming for Split)
-	vector < vector < CoutSol> > potentiels ;
+	vector < vector < CostSol> > potentials ;
 
 	// table of predecessors (dynamic programming for Split)
 	vector < vector < vector<int> > > pred ;
 
 	// storing the cost of the evaluations of arcs (i,j) in the Split graph
-	vector < vector < CoutSol> > coutArcsSplit ;
+	vector < vector < CostSol> > coutArcsSplit ;
 
 	// tells if the fitness has been computed
 	bool isFitnessComputed ;
 
 	// tells if the individual is feasible
-	bool estValide ;
+	bool isValid ;
 
 	// vector used in crossover PIX
 	vector < int > toPlace ;
 
 	// measure of distance from "this" to an individual indiv2
-	double distance(Individu * indiv2);
+	double distance(Individual * indiv2);
 
 	// Individuals ranked by proximity in the population
 	list <proxData> plusProches ;
 
 	// functions to manage the "plusProches" structure
-	void addProche(Individu * indiv) ;
-	void removeProche(Individu * indiv) ;
+	void addProche(Individual * indiv) ;
+	void removeProche(Individual * indiv) ;
 
 	// average distance with the n closest individuals
 	double distPlusProche(int n) ;
 
 	// Data structure to perform a LocalSearch. 
-	// Only some complete individuals, "rejeton" for example in Generic.h
+	// Only some complete individuals, "offspring" for example in Generic.h
 	// possess this structure. The others in Population.h are mainly used as containers
 	LocalSearch * localSearch ;
 
@@ -192,7 +192,7 @@ public:
 	// initialization of the potentials vector for Split
 	void initPot(int day) ;
 
-	// updating the LocalSearch structure with the information of the Individu.
+	// updating the LocalSearch structure with the information of the Individual.
 	// Warning, Split must have been computed before 
 	void updateLS() ;
 
@@ -204,7 +204,7 @@ public:
 
 	// copy of an individual in the other
 	// Warning, only copies the chromosomes for storage, not all other structures (potentials and LS)
-	void recopieIndividu (Individu * destination , Individu * source);
+	void recopieIndividu (Individual * destination , Individual * source);
 
 	// shaking operator, acting on the chromT structure, used by the ILS version of the code
 	// with nbShak random swaps between two customer visits in randomly chosen days.
@@ -212,10 +212,10 @@ public:
 
 	// constructor of a random individual
 	// if the flag "createAllStructures" is set to true, all search structures, including the LS are also initialized
-	Individu(Params * params, bool createAllStructures);
+	Individual(Params * params, bool createAllStructures);
 
 	//destructor
-	~Individu();
+	~Individual();
 
 };
 #endif

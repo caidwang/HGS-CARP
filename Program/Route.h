@@ -38,7 +38,7 @@ private:
 Params * params ;
 
 // Access to the associated individual
-Individu * individu ;
+Individual * individu ;
 
 public:
 
@@ -87,7 +87,7 @@ void testSeqDatas();
 
 Route(void);
 
-Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individu * indiv, int day);
+Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day);
 
 ~Route(void);
 };

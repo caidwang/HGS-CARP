@@ -17,7 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //  ---------------------------------------------------------------------- */
 
 #include "LocalSearch.h"
-#include "Individu.h"
+#include "Individual.h"
 
 void LocalSearch::runSearchTotal ()
 {
@@ -1257,13 +1257,13 @@ int LocalSearch::searchBetterPattern (int client)
 		calcul = pattern2.pat ;
 		depot = pattern2.dep ;
 		depense = pattern2.cost ;
-		for (int k = 0 ; k < params->ancienNbDays ; k++)
+		for (int k = 0 ; k < params->formerNbDays ; k++)
 		{
 			temp = calcul % 2 ;
 			calcul = calcul/2 ;
 			if (temp == 1)
 			{
-				noeudTravail = &clients[params->ancienNbDays-k + depot*params->ancienNbDays][client] ;
+				noeudTravail = &clients[params->formerNbDays - k + depot * params->formerNbDays][client] ;
 				// If the insertion in this day has not been computed yet 
 				// (Note that it would be possible to do way faster by considering the fact that only the demand of 
 				// a single delivery changes... and sometimes its even the same for different patterns)
@@ -1291,12 +1291,12 @@ int LocalSearch::searchBetterPattern (int client)
 	{
 		// removing the current occurences of this customer
 		calcul = pattern1.pat ;
-		for (int k = 0 ; k < params->ancienNbDays ; k++)
+		for (int k = 0 ; k < params->formerNbDays ; k++)
 		{
 			temp = calcul % 2 ;
 			calcul = calcul/2 ;
 			if (temp == 1)
-				removeNoeud(&clients[params->ancienNbDays-k+ pattern1.dep*params->ancienNbDays][client]);
+				removeNoeud(&clients[params->formerNbDays - k + pattern1.dep * params->formerNbDays][client]);
 		}
 
 		// (PCARP) Updating the chromP (necessary to do now, not later, otherwise the wrong data is set to pre-process the SeqData)
@@ -1306,13 +1306,13 @@ int LocalSearch::searchBetterPattern (int client)
 		// Inserting in the new locations
 		calcul = meilleurPattern.pat ;
 		depot = meilleurPattern.dep ;
-		for (int k = 0 ; k < params->ancienNbDays ; k++)
+		for (int k = 0 ; k < params->formerNbDays ; k++)
 		{
 			temp = calcul % 2 ;
 			calcul = calcul/2 ;
 			if (temp == 1)
 			{
-				Noeud * hereCli = &clients[params->ancienNbDays-k+ meilleurPattern.dep*params->ancienNbDays][client] ;
+				Noeud * hereCli = &clients[params->formerNbDays - k + meilleurPattern.dep * params->formerNbDays][client] ;
 				Noeud * thereCli = hereCli->placeInsertion[indexMeilleur] ;
 				addNoeud(hereCli,thereCli);
 			}	
@@ -1522,11 +1522,11 @@ void LocalSearch::placeManquants ()
 			{
 				calcul2 = pattern2.pat ;
 				depense = pattern2.cost ;
-				for (int kk = 0 ; kk < params->ancienNbDays ; kk++)
+				for (int kk = 0 ; kk < params->formerNbDays ; kk++)
 				{
 					if (calcul2 % 2 == 1)
 					{
-						noeudTravail = &clients[params->ancienNbDays-kk + pattern2.dep*params->ancienNbDays][k] ;
+						noeudTravail = &clients[params->formerNbDays - kk + pattern2.dep * params->formerNbDays][k] ;
 						computeCoutInsertion(noeudTravail,pat) ;
 						depense += noeudTravail->coutInsertion[pat] ;
 					}
@@ -1548,11 +1548,11 @@ void LocalSearch::placeManquants ()
 		// Inserting in the new locations
 		calcul1 = pattern1.pat ;
 		calcul2 = meilleurPattern.pat ;
-		for (int kk = 0 ; kk < params->ancienNbDays ; kk++)
+		for (int kk = 0 ; kk < params->formerNbDays ; kk++)
 		{
 			if (calcul2 % 2 == 1 && calcul1 % 2 == 0)
 			{
-				Noeud * hereCli = &clients[params->ancienNbDays-kk+ meilleurPattern.dep*params->ancienNbDays][k] ;
+				Noeud * hereCli = &clients[params->formerNbDays - kk + meilleurPattern.dep * params->formerNbDays][k] ;
 				Noeud * thereCli = hereCli->placeInsertion[indexMeilleur] ;
 				addNoeud(hereCli,thereCli);
 			}
@@ -1946,7 +1946,7 @@ LocalSearch::LocalSearch(void)
 	seqdeb = NULL ;
 }
 
-LocalSearch::LocalSearch(Params * params,Individu * individu) : params (params),individu(individu)
+LocalSearch::LocalSearch(Params * params, Individual * individu) : params (params), individu(individu)
 {
 	nbDays = params->nbDays ;
 	int nbVeh ;

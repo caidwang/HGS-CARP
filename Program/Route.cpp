@@ -20,7 +20,7 @@
 
 Route::Route(void){}
 
-Route::Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individu * indiv, int day) : cour(cour), depot(depot), vehicle(vehicle), params(params), individu(indiv), day(day)
+Route::Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day) : cour(cour), depot(depot), vehicle(vehicle), params(params), individu(indiv), day(day)
 {
 	for (int i=0 ; i < params->nbClients + params->nbDepots ; i++ )
 	{

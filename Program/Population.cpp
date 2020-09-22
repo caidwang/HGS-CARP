@@ -20,7 +20,7 @@
 
 Population::Population(Params * params) : params(params)
 {
-	Individu * randomIndiv ;
+	Individual * randomIndiv ;
 	valides = new SousPop();
 	invalides = new SousPop();
 	valides->nbIndiv = 0 ;
@@ -29,18 +29,18 @@ Population::Population(Params * params) : params(params)
 	bool feasibleFound = false ;
 
 	// Create the trainer
-	trainer = new Individu (params,true) ;
+	trainer = new Individual (params, true) ;
 	delete trainer->localSearch ;
 	trainer->localSearch = new LocalSearch(params,trainer) ; // Initialize the LS structure
 
 	// Creating the initial populations
 	for (int i=0 ; i < params->mu && (!params->isSearchingFeasible || !feasibleFound) ; i++ )
 	{
-		randomIndiv = new Individu (params,true);
+		randomIndiv = new Individual (params, true);
 		education(randomIndiv);
 		addIndividu(randomIndiv) ;
 		updateNbValides(randomIndiv);
-		if (!randomIndiv->estValide)
+		if (!randomIndiv->isValid)
 		{
 			temp = params->penalityCapa ;
 			temp2 = params->penalityLength ;
@@ -58,7 +58,7 @@ Population::Population(Params * params) : params(params)
 			trainer->recopieIndividu(randomIndiv,trainer);
 			addIndividu(randomIndiv) ;
 		}
-		if (randomIndiv->estValide) feasibleFound = true ;
+		if (randomIndiv->isValid) feasibleFound = true ;
 		delete randomIndiv ;
 	}
 
@@ -124,16 +124,16 @@ void Population::evalExtFit(SousPop * pop)
 	{
 		pop->individus[classement[i]]->divRank = (float)i/(float)(pop->nbIndiv-1) ;
 		pop->individus[classement[i]]->fitRank = (float)classement[i]/(float)(pop->nbIndiv-1) ;
-		pop->individus[classement[i]]->fitnessEtendu = pop->individus[classement[i]]->fitRank + ((float)1.0-(float)params->el/(float)pop->nbIndiv) * pop->individus[classement[i]]->divRank ;
+		pop->individus[classement[i]]->fitnessExtended = pop->individus[classement[i]]->fitRank + ((float)1.0 - (float)params->el / (float)pop->nbIndiv) * pop->individus[classement[i]]->divRank ;
 	}
 }
 
-int Population::addIndividu (Individu * indiv)
+int Population::addIndividu (Individual * indiv)
 {
 	SousPop * souspop ;
 	int k, result ;
 
-	if ( indiv->estValide ) souspop = valides ;
+	if ( indiv->isValid ) souspop = valides ;
 	else souspop = invalides ;
 
 	result = placeIndividu(souspop,indiv);
@@ -152,8 +152,8 @@ int Population::addIndividu (Individu * indiv)
 
 int Population::addAllIndividus (Population * pop)
 {
-	Individu * randomIndiv ;
-	randomIndiv = new Individu (params,1.0);
+	Individual * randomIndiv ;
+	randomIndiv = new Individual (params, 1.0);
 
 	for (int i=0 ; i<pop->valides->nbIndiv ; i++)
 	{
@@ -173,7 +173,7 @@ int Population::addAllIndividus (Population * pop)
 	return 1 ;
 }
 
-void Population::updateProximity (SousPop * pop, Individu * indiv)
+void Population::updateProximity (SousPop * pop, Individual * indiv)
 {
 	for (int k=0 ; k < pop->nbIndiv ; k++)
 	{
@@ -185,13 +185,13 @@ void Population::updateProximity (SousPop * pop, Individu * indiv)
 	}
 }
 
-bool Population::fitExist ( SousPop * pop, Individu * indiv )
+bool Population::fitExist (SousPop * pop, Individual * indiv )
 {
 	int count = 0 ;
-	double distance = indiv->coutSol.evaluation ;
+	double distance = indiv->costSol.evaluation ;
 	for (int i=0 ; i < (int)pop->nbIndiv ; i++ )
 	{
-		if (pop->individus[i]->coutSol.evaluation >= (distance - 0.01) && pop->individus[i]->coutSol.evaluation <= (distance + 0.01))
+		if (pop->individus[i]->costSol.evaluation >= (distance - 0.01) && pop->individus[i]->costSol.evaluation <= (distance + 0.01))
 			count ++ ;
 	}
 	if (count <= 1) return false ;
@@ -200,7 +200,7 @@ bool Population::fitExist ( SousPop * pop, Individu * indiv )
 
 void Population::diversify ()
 {
-	Individu * randomIndiv ;
+	Individual * randomIndiv ;
 	double temp = params->penalityCapa ;
 	double temp2 = params->penalityLength ;
 
@@ -220,11 +220,11 @@ void Population::diversify ()
 
 	for (int i=0 ; i < params->mu ; i++ )
 	{
-		randomIndiv = new Individu (params,true);
+		randomIndiv = new Individual (params, true);
 		education(randomIndiv);
 		addIndividu(randomIndiv) ;
 		updateNbValides(randomIndiv);
-		if (!randomIndiv->estValide) 
+		if (!randomIndiv->isValid)
 		{
 			temp = params->penalityCapa ;
 			temp2 = params->penalityLength ;
@@ -264,9 +264,9 @@ void Population::clear()
 	}
 }
 
-int Population::placeIndividu(SousPop * pop, Individu * indiv)
+int Population::placeIndividu(SousPop * pop, Individual * indiv)
 {
-	Individu * monIndiv = new Individu (params,false) ;
+	Individual * monIndiv = new Individual (params, false) ;
 	monIndiv->recopieIndividu (monIndiv , indiv) ;
 
 	bool placed = false ;
@@ -274,7 +274,7 @@ int Population::placeIndividu(SousPop * pop, Individu * indiv)
 	pop->individus.push_back(monIndiv);
 	while ( i >= 0 && !placed )
 	{
-		if (pop->individus[i]->coutSol.evaluation >= indiv->coutSol.evaluation + 0.001 )
+		if (pop->individus[i]->costSol.evaluation >= indiv->costSol.evaluation + 0.001 )
 		{
 			pop->individus[i+1] = pop->individus[i] ;
 			i -- ;
@@ -303,7 +303,7 @@ int Population::placeIndividu(SousPop * pop, Individu * indiv)
 
 void Population::removeIndividu(SousPop * pop, int p)
 {
-	Individu * partant = pop->individus[p];
+	Individual * partant = pop->individus[p];
 
 	// Placing the individual at the end
 	for ( int i=p+1 ; i < (int)pop->individus.size() ; i++ )
@@ -322,19 +322,19 @@ void Population::removeIndividu(SousPop * pop, int p)
 
 void Population::validatePen (SousPop * souspop)
 {
-	Individu * indiv ;
+	Individual * indiv ;
 
 	// Updating Individual Evaluations
 	for (int i = 0 ; i < souspop->nbIndiv ; i++)
-		souspop->individus[i]->coutSol.evaluation = souspop->individus[i]->coutSol.distance 
-		+ params->penalityCapa * souspop->individus[i]->coutSol.capacityViol
-		+ params->penalityLength * souspop->individus[i]->coutSol.lengthViol ;
+		souspop->individus[i]->costSol.evaluation = souspop->individus[i]->costSol.distance
+                                                    + params->penalityCapa * souspop->individus[i]->costSol.capacityViol
+                                                    + params->penalityLength * souspop->individus[i]->costSol.lengthViol ;
 
 	for (int i = 0 ; i < souspop->nbIndiv ; i++)
 	{
 		for (int j = 0 ; j < souspop->nbIndiv - i - 1; j++)
 		{
-			if (souspop->individus[j]->coutSol.evaluation >= souspop->individus[j+1]->coutSol.evaluation + 0.01 )
+			if (souspop->individus[j]->costSol.evaluation >= souspop->individus[j + 1]->costSol.evaluation + 0.01 )
 			{
 				indiv = souspop->individus[j] ;
 				souspop->individus[j] = souspop->individus[j+1] ;
@@ -344,10 +344,10 @@ void Population::validatePen (SousPop * souspop)
 	}
 }
 
-Individu * Population::getIndividuBinT ()
+Individual * Population::getIndividuBinT ()
 {
-	Individu * individu1 ;
-	Individu * individu2 ;
+	Individual * individu1 ;
+	Individual * individu2 ;
 	int place1, place2 ;
 
 	// Picking the first individual in the merge of both subpopulations
@@ -368,13 +368,13 @@ Individu * Population::getIndividuBinT ()
 	evalExtFit(invalides);
 
 	// Keeping the best one
-	if (individu1->fitnessEtendu < individu2->fitnessEtendu)
+	if (individu1->fitnessExtended < individu2->fitnessExtended)
 		return individu1 ;
 	else
 		return individu2 ;
 }
 
-Individu * Population::getIndividuPourc (int pourcentage)
+Individual * Population::getIndividuPourc (int pourcentage)
 {
 	int place ;
 	// Picking the individual in the 25% best of the valide population, if there are individuals in this set
@@ -396,13 +396,13 @@ Individu * Population::getIndividuPourc (int pourcentage)
 	}
 }
 
-Individu * Population::getIndividuBestValide ()
+Individual * Population::getIndividuBestValide ()
 {
 	if (valides->nbIndiv != 0) return valides->individus[0] ;
 	else return NULL ;
 }
 
-Individu * Population::getIndividuBestInvalide ()
+Individual * Population::getIndividuBestInvalide ()
 {
 	if (invalides->nbIndiv != 0) return invalides->individus[0] ;
 	else return NULL ;
@@ -420,7 +420,7 @@ void Population::ExportBest (string nomFichier)
 	LocalSearch * loc ;
 	ofstream myfile;
 	double temp, temp2 ;
-	Individu * bestValide = getIndividuBestValide ();
+	Individual * bestValide = getIndividuBestValide ();
 
 	if (bestValide != NULL)
 	{
@@ -437,7 +437,7 @@ void Population::ExportBest (string nomFichier)
 
 		// Little debugging tests before printing
 		trainer->testPatternCorrectness();
-		if (!trainer->estValide || trainer->coutSol.lengthViol > 0.000001 || trainer->coutSol.capacityViol > 0.000001)
+		if (!trainer->isValid || trainer->costSol.lengthViol > 0.000001 || trainer->costSol.capacityViol > 0.000001)
 			throw string("ERROR: Last individual became infeasible !!!!") ;
 		
 		// Opening the file to write the solution
@@ -448,8 +448,8 @@ void Population::ExportBest (string nomFichier)
 		// Writing the distance
 		if (params->type != 35)
 		{
-			cout << "Writing the best solution : distance : " << trainer->coutSol.distance ;
-			myfile << trainer->coutSol.distance << endl ;
+			cout << "Writing the best solution : distance : " << trainer->costSol.distance ;
+			myfile << trainer->costSol.distance << endl ;
 		}
 		else
 		{
@@ -511,7 +511,7 @@ void Population::ExportBest (string nomFichier)
 						throw string ("Issue : mismatch between the route size and the number of arcs reported by the SeqData");
 
 					myfile << " " << loc->routes[k][i].depot->cour ; // Printing the depot
-					myfile << " " << (k-1)%params->ancienNbDays + 1 ; // Printing the day
+					myfile << " " << (k-1)%params->formerNbDays + 1 ; // Printing the day
 					myfile << " " << compteur ; // Printing the index of the route
 					myfile << " " << loc->routes[k][i].depot->pred->seq0_i->load ; // Printing the total demand
 					myfile << " " << loc->routes[k][i].depot->pred->seq0_i->evaluation(loc->routes[k][i].depot->pred->seq0_i,loc->routes[k][i].vehicle) << " " ; // Printing the total cost of this route
@@ -536,7 +536,7 @@ void Population::ExportBest (string nomFichier)
 		myfile.close();
 
 		// Check the solution
-		if (!solutionChecker(allRoutes,allRoutesArcs,trainer->coutSol.distance,bestValide->maxRoute))
+		if (!solutionChecker(allRoutes, allRoutesArcs, trainer->costSol.distance, bestValide->maxRoute))
 		{
 			// If the solution does not pass the checker, then we erase the file (we will detect when running the script that some results are missing)
 			for (int i=0 ; i < 10 ; i++)
@@ -693,15 +693,15 @@ void Population::ExportBKS (string nomFichier)
 		
 		// Testing if the best solution is better than the BKS
 		// If the problem is a classic CVRP, CARP, MDCARP which seeks to optimize the distance 
-		if (params->type != 32 && params->type != 35 && getIndividuBestValide () != NULL && getIndividuBestValide()->coutSol.evaluation < fit - 0.001)
+		if (params->type != 32 && params->type != 35 && getIndividuBestValide () != NULL && getIndividuBestValide()->costSol.evaluation < fit - 0.001)
 		{
-			cout << "!!! New BKS !!! : distance = " << getIndividuBestValide()->coutSol.evaluation << " " <<  endl ;
+			cout << "!!! New BKS !!! : distance = " << getIndividuBestValide()->costSol.evaluation << " " << endl ;
 			ExportBest (nomFichier);
 		}
 		// If its a PCARP, main objective is fleet size, and then distance counts
-		else if (params->type == 32 && getIndividuBestValide () != NULL && (getIndividuBestValide()->nbRoutes < secondValue || (getIndividuBestValide()->nbRoutes == secondValue && getIndividuBestValide()->coutSol.evaluation < fit - 0.001)))
+		else if (params->type == 32 && getIndividuBestValide () != NULL && (getIndividuBestValide()->nbRoutes < secondValue || (getIndividuBestValide()->nbRoutes == secondValue && getIndividuBestValide()->costSol.evaluation < fit - 0.001)))
 		{
-			cout << "!!! New BKS !!! : fleet size = " << getIndividuBestValide()->nbRoutes << " | distance = " << getIndividuBestValide()->coutSol.evaluation << " " <<  endl ;
+			cout << "!!! New BKS !!! : fleet size = " << getIndividuBestValide()->nbRoutes << " | distance = " << getIndividuBestValide()->costSol.evaluation << " " << endl ;
 			ExportBest (nomFichier);
 		}
 		else if (params->type == 35 && getIndividuBestValide () != NULL && getIndividuBestValide()->maxRoute < secondValue - 0.001)
@@ -754,7 +754,7 @@ double Population::getMoyenneValides ()
 {
 	double moyenne = 0 ;
 	for (int i=0 ; i < min(valides->nbIndiv,params->mu) ; i ++)
-		moyenne += valides->individus[i]->coutSol.evaluation ;
+		moyenne += valides->individus[i]->costSol.evaluation ;
 	return  moyenne / min(valides->nbIndiv,params->mu) ;
 }
 
@@ -762,7 +762,7 @@ double Population::getMoyenneInvalides ()
 {
 	double moyenne = 0 ;
 	for (int i=0 ; i <  min(invalides->nbIndiv,params->mu); i ++)
-		moyenne += invalides->individus[i]->coutSol.evaluation ;
+		moyenne += invalides->individus[i]->costSol.evaluation ;
 	return  moyenne / min(invalides->nbIndiv,params->mu) ;
 }
 
@@ -790,9 +790,9 @@ int Population::selectCompromis (SousPop * souspop)
 	for (int i=1 ; i < souspop->nbIndiv ; i++)
 	{
 		if (souspop->individus[i]->distPlusProche(1) <= 0.001 ) // in solution space
-			souspop->individus[i]->fitnessEtendu += 5 ;
+			souspop->individus[i]->fitnessExtended += 5 ;
 		if (fitExist(souspop,souspop->individus[i])) // in objective space
-			souspop->individus[i]->fitnessEtendu += 5 ;	
+			souspop->individus[i]->fitnessExtended += 5 ;
 	}
 
 	// Ranking the elements per extended fitness and selecting out the worst
@@ -800,7 +800,7 @@ int Population::selectCompromis (SousPop * souspop)
 	{
 		for (int i = 0 ; i < souspop->nbIndiv - n - 1 ; i++ )
 		{
-			if ( souspop->individus[classement[i]]->fitnessEtendu > souspop->individus[classement[i+1]]->fitnessEtendu )
+			if (souspop->individus[classement[i]]->fitnessExtended > souspop->individus[classement[i + 1]]->fitnessExtended )
 			{
 				temp = classement[i+1] ;
 				classement[i+1] = classement[i] ;
@@ -822,7 +822,7 @@ void Population::updateAge ()
 		invalides->individus[i]->age ++  ;
 }
 
-void Population::education(Individu * indiv)
+void Population::education(Individual * indiv)
 {	
 	indiv->recopieIndividu(trainer,indiv);
 	trainer->generalSplit();
@@ -832,11 +832,11 @@ void Population::education(Individu * indiv)
 	indiv->recopieIndividu(indiv,trainer);
 }
 
-void Population::updateNbValides (Individu * indiv)
+void Population::updateNbValides (Individual * indiv)
 {		
-	listeValiditeCharge.push_back(indiv->coutSol.capacityViol < 0.001);
+	listeValiditeCharge.push_back(indiv->costSol.capacityViol < 0.001);
 	listeValiditeCharge.pop_front();
-	listeValiditeTemps.push_back(indiv->coutSol.lengthViol < 0.001);
+	listeValiditeTemps.push_back(indiv->costSol.lengthViol < 0.001);
 	listeValiditeTemps.pop_front();
 }
 
@@ -848,12 +848,12 @@ void Population::afficheEtat(int nbIter)
 	cout << "It " << nbIter << " | Sol " ;
 
 	if (getIndividuBestValide () != NULL)
-		cout << getIndividuBestValide()->coutSol.distance << " " << getIndividuBestValide()->coutSol.routes << " "  ;
+		cout << getIndividuBestValide()->costSol.distance << " " << getIndividuBestValide()->costSol.routes << " "  ;
 	else
 		cout << "NO-VALID " ;
 
 	if (getIndividuBestInvalide () != NULL)
-		cout << getIndividuBestInvalide()->coutSol.evaluation ;
+		cout << getIndividuBestInvalide()->costSol.evaluation ;
 	else
 		cout << "NO-INVALID" ;
 
@@ -863,9 +863,9 @@ void Population::afficheEtat(int nbIter)
 		<< " | Pen " << params->penalityCapa << " " << params->penalityLength
 		<< " | Pop " << valides->nbIndiv << " " << invalides->nbIndiv ;
 	if (getIndividuBestInvalide() != NULL && getIndividuBestValide() == NULL)
-		cout << " | Feas : distance " << getIndividuBestInvalide()->coutSol.distance
-		<< " duration " << getIndividuBestInvalide()->coutSol.lengthViol 
-		<< " load " << getIndividuBestInvalide()->coutSol.capacityViol ;
+		cout << " | Feas : distance " << getIndividuBestInvalide()->costSol.distance
+		<< " duration " << getIndividuBestInvalide()->costSol.lengthViol
+		<< " load " << getIndividuBestInvalide()->costSol.capacityViol ;
 	cout << endl ;
 	//cout << " | Age Valides : " << getAgeValides() << endl ;
 }

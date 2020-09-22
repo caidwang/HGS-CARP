@@ -16,9 +16,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //  ---------------------------------------------------------------------- */
 
-#include "Individu.h"
+#include "Individual.h"
 
-Individu::Individu(Params * params, bool createAllStructures) : params(params)
+Individual::Individual(Params * params, bool createAllStructures) : params(params)
 {
 	// Initializing some structures that enable to compute the data on subsequences in the Split algorithm
 	myseq = new SeqData(params);
@@ -47,11 +47,11 @@ Individu::Individu(Params * params, bool createAllStructures) : params(params)
 	for (int i=0 ; i< params->nbDepots + params->nbClients ; i++)
 	{
 		follows.emplace_back();
-		precedents.emplace_back();
+		previous.emplace_back();
 		for (int k=0 ; k <= params->nbDays ; k++)
 		{
 			follows[i].push_back(-1);
-			precedents[i].push_back(-1);
+			previous[i].push_back(-1);
 		}
 	}
 
@@ -77,11 +77,11 @@ Individu::Individu(Params * params, bool createAllStructures) : params(params)
 				dayCombinaison = chromP[i].pat ;
 				depot = chromP[i].dep ;
 				if (chromP[i].dep == -1) cout << "error" << endl ;
-				for (int k = 0 ; k < params->ancienNbDays ; k++)
+				for (int k = 0 ; k < params->formerNbDays ; k++)
 				{
 					temp2 = dayCombinaison % 2 ;
 					dayCombinaison = dayCombinaison/2 ; 
-					if (temp2 == 1) chromT[params->ancienNbDays-k + depot*params->ancienNbDays].push_back(i);
+					if (temp2 == 1) chromT[params->formerNbDays - k + depot * params->formerNbDays].push_back(i);
 				}
 			}
 		}
@@ -112,8 +112,8 @@ Individu::Individu(Params * params, bool createAllStructures) : params(params)
 			}
 		}
 
-		vector <CoutSol> potTemp ;
-		CoutSol csol ;
+		vector <CostSol> potTemp ;
+		CostSol csol ;
 		csol.evaluation = 1.e30 ;
 
 		for (int k = 0 ; k <= params->nbDays ; k++)
@@ -122,45 +122,45 @@ Individu::Individu(Params * params, bool createAllStructures) : params(params)
 
 		for (int i = 0 ; i < maxDepots + 1 ; i++)
 		{
-			potentiels.push_back(potTemp);
+			potentials.push_back(potTemp);
 			for (int j = 0 ; j < (int) params->nbClients + params->nbDepots + 1 ; j++)
-				potentiels[i].push_back(csol);
+				potentials[i].push_back(csol);
 		}
-		potentiels[0][0].evaluation = 0 ;
+        potentials[0][0].evaluation = 0 ;
 
 		for (int i=0 ;  i< params->nbDepots + params->nbClients ; i++)
 		{
-			coutArcsSplit.push_back(vector<CoutSol>());
+			coutArcsSplit.push_back(vector<CostSol>());
 			for (int j=0 ;  j< params->nbDepots + params->nbClients + 1 ; j++)
-				coutArcsSplit[i].push_back(CoutSol());
+				coutArcsSplit[i].push_back(CostSol());
 		}
 	}
 }
 
-void Individu::recopieIndividu (Individu * destination , Individu * source)
+void Individual::recopieIndividu (Individual * destination , Individual * source)
 {
 	destination->chromT = source->chromT ;
 	destination->chromP = source->chromP ;
 	destination->chromR = source->chromR ;
-	destination->coutSol.capacityViol = source->coutSol.capacityViol ;
-	destination->coutSol.evaluation = source->coutSol.evaluation ;
-	destination->coutSol.distance = source->coutSol.distance ;
-	destination->coutSol.lengthViol = source->coutSol.lengthViol ;
-	destination->coutSol.routes = source->coutSol.routes ;
+	destination->costSol.capacityViol = source->costSol.capacityViol ;
+	destination->costSol.evaluation = source->costSol.evaluation ;
+	destination->costSol.distance = source->costSol.distance ;
+	destination->costSol.lengthViol = source->costSol.lengthViol ;
+	destination->costSol.routes = source->costSol.routes ;
 	destination->isFitnessComputed = source->isFitnessComputed ;
 	destination->age = 0 ;
-	destination->estValide = source->estValide ;
+	destination->isValid = source->isValid ;
 	destination->follows = source->follows ;
-	destination->precedents = source->precedents ;
+	destination->previous = source->previous ;
 	destination->nbRoutes = source->nbRoutes ;
 	destination->maxRoute = source->maxRoute ;
-	destination->potentiels = source->potentiels ;
+	destination->potentials = source->potentials ;
 	destination->pred = source->pred ;
 	destination->toPlace.clear();
 	destination->toPlace = source->toPlace ;
 }
 
-void Individu::shakingSwap (int nbShak)
+void Individual::shakingSwap (int nbShak)
 {
 	// only used in the ILS
 	int itShak = 0 ;
@@ -182,20 +182,20 @@ void Individu::shakingSwap (int nbShak)
 	}
 }
 
-Individu::~Individu() 
+Individual::~Individual()
 { 
 	FreeClear(seq);
 	delete localSearch ;
 	delete myseq ;
 }
 
-void Individu::generalSplit()
+void Individual::generalSplit()
 {
-	coutSol.evaluation = 0 ;
-	coutSol.capacityViol = 0 ;
-	coutSol.distance = 0 ;
-	coutSol.lengthViol = 0 ;
-	coutSol.routes = 0 ;
+    costSol.evaluation = 0 ;
+    costSol.capacityViol = 0 ;
+    costSol.distance = 0 ;
+    costSol.lengthViol = 0 ;
+    costSol.routes = 0 ;
 
 	// performing the Split for each day
 	// we first try the simple split, 
@@ -203,14 +203,14 @@ void Individu::generalSplit()
 		if (chromT[k].size() != 0  && splitSimple(k) == 0) splitLF(k); // if its not successful we run the Split with limited fleet
 
 	// Do we have a feasible solution
-	if (coutSol.capacityViol <= 0.00000001 && coutSol.lengthViol <= 0.00000001) 
-		estValide = true ;
-	else 
-		estValide = false;
+	if (costSol.capacityViol <= 0.00000001 && costSol.lengthViol <= 0.00000001)
+        isValid = true ;
+	else
+        isValid = false;
 
 	// If split was unsuccessful, we allow more capacity violations
 	// Usually, the allowed capacity violation is largely sufficient, and this message would indicate a bug.
-	if ( coutSol.evaluation > 1.e20 ) 
+	if (costSol.evaluation > 1.e20 )
 	{
 		cout << "Increasing the capacity violation limit in Split" << endl ;
 		params->borne *= 1.1 ;
@@ -227,7 +227,7 @@ void Individu::generalSplit()
 }
 
 // Simple Split, does not necessarily respect the number of vehicles
-int Individu::splitSimple(int k) 
+int Individual::splitSimple(int k)
 {
 	// We will only use the line "0" of the potential and pred data structures
 	myseq->initialisation(params->ordreVehicules[k][0].depotNumber,params,this,k,false);
@@ -247,13 +247,13 @@ int Individu::splitSimple(int k)
 			cost = seq[0]->evaluation(seq[j+1],myseq,&params->ordreVehicules[k][0],mydist,mytminex,myloadex); // and evaluate
 
 			// Test if this label is better
-			if ( potentiels[0][i].evaluation + cost < potentiels[0][j+1].evaluation )
+			if (potentials[0][i].evaluation + cost < potentials[0][j + 1].evaluation )
 			{
-				potentiels[0][j+1].evaluation = potentiels[0][i].evaluation + cost ;
-				potentiels[0][j+1].capacityViol = potentiels[0][i].capacityViol + myloadex ;
-				potentiels[0][j+1].distance = potentiels[0][i].distance + mydist ;
-				potentiels[0][j+1].lengthViol = potentiels[0][i].lengthViol + mytminex ;
-				potentiels[0][j+1].routes = potentiels[0][i].routes + 1 ;
+                potentials[0][j + 1].evaluation = potentials[0][i].evaluation + cost ;
+                potentials[0][j + 1].capacityViol = potentials[0][i].capacityViol + myloadex ;
+                potentials[0][j + 1].distance = potentials[0][i].distance + mydist ;
+                potentials[0][j + 1].lengthViol = potentials[0][i].lengthViol + mytminex ;
+                potentials[0][j + 1].routes = potentials[0][i].routes + 1 ;
 				pred[k][0][j+1] = i ;
 			}
 			j++ ;
@@ -273,11 +273,11 @@ int Individu::splitSimple(int k)
 	if (j == 0)
 	{
 		// We cumulate the costs
-		coutSol.capacityViol += potentiels[0][chromT[k].size()].capacityViol ;
-		coutSol.evaluation += potentiels[0][chromT[k].size()].evaluation ;
-		coutSol.distance += potentiels[0][chromT[k].size()].distance ;
-		coutSol.lengthViol += potentiels[0][chromT[k].size()].lengthViol ;
-		coutSol.routes += potentiels[0][chromT[k].size()].routes ;
+		costSol.capacityViol += potentials[0][chromT[k].size()].capacityViol ;
+        costSol.evaluation += potentials[0][chromT[k].size()].evaluation ;
+        costSol.distance += potentials[0][chromT[k].size()].distance ;
+        costSol.lengthViol += potentials[0][chromT[k].size()].lengthViol ;
+        costSol.routes += potentials[0][chromT[k].size()].routes ;
 		initPot(k); // we reinitialize the dynamic programming structures for the next use
 		return 1 ;
 	}
@@ -292,7 +292,7 @@ int Individu::splitSimple(int k)
 // To avoid evaluating several time ("m" times, where m is the number of vehicles) the costs of the arcs 
 // (this could be time consuming for some complex VRP variants, for example problems with HOS regulations)
 // We already pre-compute and store them in "coutArcsSplit"
-void Individu::splitLF(int k) 
+void Individual::splitLF(int k)
 { 
 	double cost, mydist,mytminex,myloadex;
 	int i,j ;
@@ -322,19 +322,19 @@ void Individu::splitLF(int k)
 	{
 		i = 0 ;
 		// propagate all labels
-		while (i < (int)chromT[k].size() && potentiels[cam][i].evaluation < 1.e29 )
+		while (i < (int)chromT[k].size() && potentials[cam][i].evaluation < 1.e29 )
 		{
 			cost = coutArcsSplit[i][i].evaluation ;
 			myloadex = coutArcsSplit[i][i].capacityViol ;
 			mydist =  coutArcsSplit[i][i].distance ;
 			mytminex = coutArcsSplit[i][i].lengthViol ;
-			if ( potentiels[cam][i].evaluation + cost < potentiels[cam+1][i].evaluation )
+			if (potentials[cam][i].evaluation + cost < potentials[cam + 1][i].evaluation )
 			{
-				potentiels[cam+1][i].evaluation = potentiels[cam][i].evaluation  + cost ;
-				potentiels[cam+1][i].capacityViol = potentiels[cam][i].capacityViol + myloadex ;
-				potentiels[cam+1][i].distance = potentiels[cam][i].distance + mydist ;
-				potentiels[cam+1][i].lengthViol = potentiels[cam][i].lengthViol + mytminex ;
-				potentiels[cam+1][i].routes = potentiels[cam][i].routes ;
+                potentials[cam + 1][i].evaluation = potentials[cam][i].evaluation + cost ;
+                potentials[cam + 1][i].capacityViol = potentials[cam][i].capacityViol + myloadex ;
+                potentials[cam + 1][i].distance = potentials[cam][i].distance + mydist ;
+                potentials[cam + 1][i].lengthViol = potentials[cam][i].lengthViol + mytminex ;
+                potentials[cam + 1][i].routes = potentials[cam][i].routes ;
 				pred[k][cam+1][i] = i ;
 			}
 			j = i ;
@@ -344,13 +344,13 @@ void Individu::splitLF(int k)
 				myloadex = coutArcsSplit[i][j+1].capacityViol ;
 				mydist =  coutArcsSplit[i][j+1].distance ;
 				mytminex = coutArcsSplit[i][j+1].lengthViol ;
-				if ( potentiels[cam][i].evaluation + cost < potentiels[cam+1][j+1].evaluation )
+				if (potentials[cam][i].evaluation + cost < potentials[cam + 1][j + 1].evaluation )
 				{
-					potentiels[cam+1][j+1].evaluation = potentiels[cam][i].evaluation + cost ;
-					potentiels[cam+1][j+1].capacityViol = potentiels[cam][i].capacityViol + myloadex ;
-					potentiels[cam+1][j+1].distance = potentiels[cam][i].distance + mydist ;
-					potentiels[cam+1][j+1].lengthViol = potentiels[cam][i].lengthViol + mytminex ;
-					potentiels[cam+1][j+1].routes = potentiels[cam][i].routes + 1 ;
+                    potentials[cam + 1][j + 1].evaluation = potentials[cam][i].evaluation + cost ;
+                    potentials[cam + 1][j + 1].capacityViol = potentials[cam][i].capacityViol + myloadex ;
+                    potentials[cam + 1][j + 1].distance = potentials[cam][i].distance + mydist ;
+                    potentials[cam + 1][j + 1].lengthViol = potentials[cam][i].lengthViol + mytminex ;
+                    potentials[cam + 1][j + 1].routes = potentials[cam][i].routes + 1 ;
 					pred[k][cam+1][j+1] = i ;
 				}
 				j++ ;
@@ -360,17 +360,17 @@ void Individu::splitLF(int k)
 	}
 
 	// we cumulate the costs
-	coutSol.capacityViol += potentiels[params->nombreVehicules[k]][chromT[k].size()].capacityViol ;
-	coutSol.evaluation += potentiels[params->nombreVehicules[k]][chromT[k].size()].evaluation ;
-	coutSol.distance += potentiels[params->nombreVehicules[k]][chromT[k].size()].distance ;
-	coutSol.lengthViol += potentiels[params->nombreVehicules[k]][chromT[k].size()].lengthViol ;
-	coutSol.routes += potentiels[params->nombreVehicules[k]][chromT[k].size()].routes ;
+	costSol.capacityViol += potentials[params->nombreVehicules[k]][chromT[k].size()].capacityViol ;
+    costSol.evaluation += potentials[params->nombreVehicules[k]][chromT[k].size()].evaluation ;
+    costSol.distance += potentials[params->nombreVehicules[k]][chromT[k].size()].distance ;
+    costSol.lengthViol += potentials[params->nombreVehicules[k]][chromT[k].size()].lengthViol ;
+    costSol.routes += potentials[params->nombreVehicules[k]][chromT[k].size()].routes ;
 
 	// and clean the dynamic programming structures
 	initPot(k);
 }
 
-void Individu::measureSol()
+void Individual::measureSol()
 {
 	int j ;
 	nbRoutes = 0 ;
@@ -413,24 +413,24 @@ void Individu::measureSol()
 	}
 
 	// To avoid any problem of numerical imprecision
-	coutSol.evaluation = coutSol.distance + params->penalityCapa * coutSol.capacityViol
-		+ params->penalityLength * coutSol.lengthViol ;
+	costSol.evaluation = costSol.distance + params->penalityCapa * costSol.capacityViol
+                         + params->penalityLength * costSol.lengthViol ;
 }
 
-void Individu::initPot(int day) 
+void Individual::initPot(int day)
 {
 	for (int i = 0 ; i < params->nombreVehicules[day] + 1 ; i++)
 		for (size_t j = 0 ; j <= chromT[day].size() + 1 ; j++)
-			potentiels[i][j].evaluation = 1.e30 ;
+            potentials[i][j].evaluation = 1.e30 ;
 
-	potentiels[0][0].evaluation = 0 ;
-	potentiels[0][0].capacityViol = 0 ;
-	potentiels[0][0].distance = 0 ;
-	potentiels[0][0].lengthViol = 0 ;
-	potentiels[0][0].routes = 0 ;
+    potentials[0][0].evaluation = 0 ;
+    potentials[0][0].capacityViol = 0 ;
+    potentials[0][0].distance = 0 ;
+    potentials[0][0].lengthViol = 0 ;
+    potentials[0][0].routes = 0 ;
 }
 
-void Individu::updateLS() 
+void Individual::updateLS()
 {
 	// Loading the local search structures
 	// Warning, Split must have been computed before
@@ -529,7 +529,7 @@ void Individu::updateLS()
 }
 
 
-void Individu::updateIndiv()
+void Individual::updateIndiv()
 {
 	// Now, we go through the LS structure to update the individual (its chromosomes)
 	int pos ; 
@@ -560,7 +560,7 @@ void Individu::updateIndiv()
 	generalSplit();
 }
 
-void Individu::testPatternCorrectness()
+void Individual::testPatternCorrectness()
 {
 	// Little test for debugging (test that all visits are correct for each customer)
 	vector <int> frequencies ;
@@ -574,11 +574,11 @@ void Individu::testPatternCorrectness()
 	// Here a little test that verifies that all patterns in the chromP correspond to the values in the chromT
 	for (int k=1 ; k <= params->nbDays ; k++)
 	{
-		int realDay = (k-1)%params->ancienNbDays + 1 ;
+		int realDay = (k-1)%params->formerNbDays + 1 ;
 		for (int i=0 ; i<(int)chromT[k].size() ; i++)
 		{
 			int calcul = chromP[chromT[k][i]].pat ;
-			for (int kk = 0 ; kk < params->ancienNbDays - realDay ; kk++)
+			for (int kk = 0 ; kk < params->formerNbDays - realDay ; kk++)
 				calcul = calcul/2 ;
 			if ( calcul % 2 != 1)
 				cout << "Issue, some customers are not placed in accordance to their pattern" << endl ;
@@ -595,7 +595,8 @@ void Individu::testPatternCorrectness()
 		if ( chromP[i].dep < 0 || chromP[i].dep >= params->nbDepots  ) throw string ("Incorrect solution with missing visits") ;
 }
 
-double Individu::distance(Individu * indiv2)
+// 计算两个个体之间的hamming距离, 用于判断对多样性的贡献
+double Individual::distance(Individual * indiv2)
 {
 	// Hamming distance
 	bool isIdentical ;
@@ -604,6 +605,7 @@ double Individu::distance(Individu * indiv2)
 	for (int j=params->nbDepots ; j < params->nbClients + params->nbDepots ; j++)
 	{
 		// For PVRP (Hamming distance based on the patterns)
+		// 和文章描述有出入, 文章中, 如果pattern不同并且depot不同, 应该是累加2, 此处累加1
 		isIdentical = (chromP[j].pat == indiv2->chromP[j].pat && chromP[j].dep == indiv2->chromP[j].dep) ;
 
 		// For CVRP (Hamming distance based on the predecessors/successors)
@@ -611,8 +613,8 @@ double Individu::distance(Individu * indiv2)
 		{
 			for (int s=1  ; s <= params->nbDays ; s++)
 			{
-				if ((follows[j][s] != indiv2->follows[j][s] || precedents[j][s] != indiv2->precedents[j][s] )
-					&& ( precedents[j][s] != indiv2->follows[j][s] || follows[j][s] != indiv2->precedents[j][s] ))
+				if ((follows[j][s] != indiv2->follows[j][s] || previous[j][s] != indiv2->previous[j][s] )
+					&& (previous[j][s] != indiv2->follows[j][s] || follows[j][s] != indiv2->previous[j][s] ))
 					isIdentical = false ;
 			}
 		}
@@ -624,7 +626,8 @@ double Individu::distance(Individu * indiv2)
 	return ((double)note /(double)(2*params->nbClients)) ;
 }
 
-void Individu::computeFollows ()
+// updating the predecessor and successor structure
+void Individual::computeFollows ()
 {
 	int jj ;
 	for (int i=0 ; i< params->nbDepots + params->nbClients ; i++)
@@ -632,7 +635,7 @@ void Individu::computeFollows ()
 		for (int k=1 ; k<= params->nbDays; k++)
 		{
             follows[i][k] = -1 ;
-			precedents[i][k] = -1 ;
+            previous[i][k] = -1 ;
 		}
 	}
 
@@ -644,16 +647,16 @@ void Individu::computeFollows ()
                 follows[chromT[k][i]][k] = chromT[k][i + 1];
 
 			for (int i=1 ; i < (int)chromT[k].size() ; i++)
-				precedents[chromT[k][i]][k] = chromT[k][i-1];
+                previous[chromT[k][i]][k] = chromT[k][i - 1];
 
             follows[chromT[k][chromT[k].size() - 1]][k] = params->ordreVehicules[k][0].depotNumber;
-			precedents[chromT[k][0]][k] = params->ordreVehicules[k][0].depotNumber;
+            previous[chromT[k][0]][k] = params->ordreVehicules[k][0].depotNumber;
 
 			// arranging those which are located at the beginning or end of a route
 			for (int i=0 ; i < params->nombreVehicules[k] ; i++)
 			{
 				jj = chromR[k][i] ;
-				precedents[chromT[k][jj]][k] = params->ordreVehicules[k][0].depotNumber;
+                previous[chromT[k][jj]][k] = params->ordreVehicules[k][0].depotNumber;
 				if (jj != 0)
                     follows[chromT[k][jj - 1]][k] = params->ordreVehicules[k][0].depotNumber;
 			}
@@ -661,11 +664,12 @@ void Individu::computeFollows ()
 	}
 }
 
-void Individu::addProche(Individu * indiv)
+// 维护个体在种群中相似个体的列表, 列表中个体与该个体的相似程度逐渐降低 proche -> close 相似
+void Individual::addProche(Individual * indiv)
 {
 	// Adding an individual in the structure of proximity (diversity management procedures)
 	list<proxData>::iterator it ;
-	proxData data ;
+	proxData data ; // data about the proximity of an Individual with regards to the others in the population.
 	data.indiv = indiv ;
 	data.dist = distance(indiv);
 
@@ -679,7 +683,7 @@ void Individu::addProche(Individu * indiv)
 	}
 }
 
-void Individu::removeProche(Individu * indiv)
+void Individual::removeProche(Individual * indiv)
 {
 	// Removing an individual in the structure of proximity (diversity management procedures)
 	list<proxData>::iterator last = plusProches.end();
@@ -690,7 +694,7 @@ void Individu::removeProche(Individu * indiv)
 			++first ;
 }
 
-double Individu::distPlusProche(int n) 
+double Individual::distPlusProche(int n)
 {
 	// Computing the average distance with the close elements (diversity management)
 	double result = 0 ;

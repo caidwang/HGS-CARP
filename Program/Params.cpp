@@ -238,7 +238,7 @@ void Params::preleveDonnees (string nomInstance)
 	// Setting the other instance parameters
 	if (type == 32) nbDays = 5 ; // PCARP instances are defined on 5 days
 	else nbDays = 1 ; // Other Instances
-	ancienNbDays = nbDays ;
+	formerNbDays = nbDays ;
 	if (type != 33) nbDepots = 1 ; // for MDCARP instances, the number of depots was already specified in commandline
 	nbClients = ar_ArcsRequired + ar_EdgesRequired + ar_NodesRequired ;
 
@@ -355,8 +355,8 @@ void Params::calculeStructures ()
 
 	for ( int i=0 ; i < nbDepots + nbClients ; i++ )
 	{
-		cli[i].computeVisitsDyn(nbDays,ancienNbDays);
-		cli[i].computeJourSuiv(nbDays,ancienNbDays);
+		cli[i].computeVisitsDyn(nbDays, formerNbDays);
+		cli[i].computeJourSuiv(nbDays, formerNbDays);
 	}
 }
 
@@ -1133,7 +1133,7 @@ void Params::processDataStructuresMD ()
 		dayCapacity.push_back(0);
 		for (int d=0 ; d<nbVehiculesPerDep ; d++ )
 		{
-			ordreVehicules[k].push_back(ordreVehiculesAncien[ (k-1)%ancienNbDays + 1 ] [ ((k - 1)/ancienNbDays) * nbVehiculesPerDep + d ]);
+			ordreVehicules[k].push_back(ordreVehiculesAncien[(k-1) % formerNbDays + 1 ] [((k - 1) / formerNbDays) * nbVehiculesPerDep + d ]);
 			dayCapacity[k] += ordreVehicules[k][d].vehicleCapacity ;
 		}
 	}
