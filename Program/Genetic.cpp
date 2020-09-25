@@ -384,9 +384,7 @@ int Genetic::crossPIX ()
 			j = start ;
 			while ( j != ((end + 1) % offspring->chromT[day].size()) )
 			{
-				freqClient[offspring->chromT[day][j]] -= 1 ;
-                offspring->chromP[offspring->chromT[day][j]].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
-                offspring->chromP[offspring->chromT[day][j]].dep = (day - 1) / params->formerNbDays ;
+                updateDepotAndPattern(offspring->chromT[day][j], day);
 				keep2[day].push_back(offspring->chromT[day][j]) ;
 				j = (j+1) % offspring->chromT[day].size() ;
 			}
@@ -403,11 +401,7 @@ int Genetic::crossPIX ()
 			// 遍历的是某一天的所有tour
 			for (j=0 ; j < (int)offspring->chromT[day].size() ; j++)
 			{
-				freqClient[offspring->chromT[day][j]] -= 1 ;
-				// pattern 实际上是按位编码的, day0 在最高位 dayN在最低位
-                offspring->chromP[offspring->chromT[day][j]].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
-                // dep的赋值: nbDay 实际值是 nbDay * nbDepot 通过 day - 1 / nbDays 落到实际的depot的编号上
-                offspring->chromP[offspring->chromT[day][j]].dep = (day - 1) / params->formerNbDays ;
+                updateDepotAndPattern(offspring->chromT[day][j], day);
 			}
 		}
 	}
@@ -427,9 +421,7 @@ int Genetic::crossPIX ()
 					&& (offspring->chromP[ii].dep == -1 || offspring->chromP[ii].dep == (day - 1) / params->formerNbDays ))
 				{
 					offspring->chromT[day].push_back(ii);
-					freqClient[ii] -= 1 ;
-                    offspring->chromP[ii].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
-                    offspring->chromP[ii].dep = (day - 1) / params->formerNbDays ;
+                    updateDepotAndPattern(ii, day);
 				}
 			}
 		}
@@ -517,7 +509,15 @@ void Genetic::disturbDays(vector<int> &daysDisturb) const {
     }
 }
 
-Genetic::Genetic(Params * params,Population * population, clock_t ticks, bool traces) : 
+void Genetic::updateDepotAndPattern(int customerVertexIdx, int day) {
+    freqClient[customerVertexIdx] -= 1 ;
+    // pattern 实际上是按位编码的, day0 在最高位 dayN在最低位
+    offspring->chromP[customerVertexIdx].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
+    // dep的赋值: nbDay 实际值是 nbDay * nbDepot 通过 day - 1 / nbDays 落到实际的depot的编号上
+    offspring->chromP[customerVertexIdx].dep = (day - 1) / params->formerNbDays ;
+}
+
+Genetic::Genetic(Params * params,Population * population, clock_t ticks, bool traces) :
 params(params) , population(population) , ticks(ticks) , traces(traces)
 {
 	for (int i=0 ; i < params->nbClients + params->nbDepots ; i++ )
@@ -531,7 +531,7 @@ params(params) , population(population) , ticks(ticks) , traces(traces)
     offspringBestFound = new Individual(params, true) ;
     offspringBestFoundAll = new Individual(params, true) ;
     offspring->localSearch = new LocalSearch(params, offspring) ;
-} 
+}
 
 Genetic::~Genetic(void)
 { 

@@ -408,7 +408,7 @@ Individual * Population::getIndividuBestInvalide ()
 	else return NULL ;
 }
 
-void Population::ExportBest (string nomFichier) 
+void Population::ExportBest (string filename)
 {
 	vector <int> rout ;
 	vector < vector < vector <int> > > allRoutes ; 
@@ -441,7 +441,7 @@ void Population::ExportBest (string nomFichier)
 			throw string("ERROR: Last individual became infeasible !!!!") ;
 		
 		// Opening the file to write the solution
-		myfile.open(nomFichier.data());
+		myfile.open(filename.data());
 		myfile.precision(10);
 		cout.precision(10);
 		
@@ -469,7 +469,7 @@ void Population::ExportBest (string nomFichier)
 			myfile << trainer->nbRoutes << endl ;
 		}
 
-		cout << " | in " << nomFichier.c_str() << endl ;
+		cout << " | in " << filename.c_str() << endl ;
 
 		// Printing the total time of the run
 		// (we print the number of clock ticks to help for short runs, the user will do the proper conversion) 
@@ -541,7 +541,7 @@ void Population::ExportBest (string nomFichier)
 			// If the solution does not pass the checker, then we erase the file (we will detect when running the script that some results are missing)
 			for (int i=0 ; i < 10 ; i++)
 				cout << "INFEASIBLE SOLUTION IN CHECKER -- ERASING SOLUTION !!!" << endl;
-			myfile.open(nomFichier.data(), std::ofstream::trunc);
+			myfile.open(filename.data(), std::ofstream::trunc);
 			myfile << "" << endl ;
 			myfile.close();
 		}

@@ -109,6 +109,8 @@ public:
     void initialInCrossPIX();
 
     void generateN1AndN2ForSplitPopulation(int &j1, int &j2) const;
+
+    void updateDepotAndPattern(int customerVertexIdx, int day);
 };
 
 #endif

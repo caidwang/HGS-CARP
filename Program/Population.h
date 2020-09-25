@@ -116,7 +116,7 @@ class Population
    //////////////////////////////////////////////////////////
 
    // Print the best solution in a file
-   void ExportBest (string nomFichier) ;
+   void ExportBest (string filename) ;
 
    // Solution check
    // Verifies the cost and feasibility of the solution
