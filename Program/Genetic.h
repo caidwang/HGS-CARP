@@ -103,6 +103,12 @@ public:
 
 	// Destructor
 	~Genetic(void);
+
+    void disturbDays(vector<int> &daysDisturb) const;
+
+    void initialInCrossPIX();
+
+    void generateN1AndN2ForSplitPopulation(int &j1, int &j2) const;
 };
 
 #endif

@@ -111,9 +111,11 @@ public:
 
 	// The giant tour of the individual
 	// chromT[i][j] -> day i, j^th customer in the giant tour
+	// 保存giant tour的内容
 	vector < vector<int> > chromT ;
 
 	// Pattern chromosome of an individual
+	// 保存pattern的内容和分配的depot
 	vector < pattern > chromP ;
 
 	// Indices of the beginning of the routes (if already computed via Split)

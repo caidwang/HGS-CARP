@@ -349,7 +349,7 @@ int Genetic::crossOX ()
 
 int Genetic::crossPIX ()
 {
-	vector < int > empty, keep, joursPerturb, boardEnd, boardStatus ; // vide -- 空闲的  garder -- 保存 joursPerturb -- 扰动日期
+	vector < int > empty, keep, daysDisturb, boardEnd, boardStatus ; // vide -- 空闲的  garder -- 保存 daysDisturb -- 扰动日期
 	vector < vector <int> > keep2 ;
 	int jj,i,ii,j,temp,size ;
 	int start, end, day ;
@@ -357,46 +357,27 @@ int Genetic::crossPIX ()
 	int placeInsertion ;
 
 	// We initialize some little data structures
-	for (i=0 ; i < params->nbClients + params->nbDepots ; i++ )
-	{
-		freqClient[i] = params->cli[i].freq ;
-        offspring->chromP[i].pat = 0 ;
-        offspring->chromP[i].dep = -1 ;
-	}
+    initialInCrossPIX();
 
+    // We take the days in random order
+    disturbDays(daysDisturb);
 
-	// We take the days in random order
-	for (int k=1 ; k <= params->nbDays ; k++ )
-		joursPerturb.push_back(k) ;
-	for (i = 0 ; i < (int)joursPerturb.size() ; i++)
-	{
-		jj = i + rand() % ((int)joursPerturb.size() - i) ;
-		temp = joursPerturb[i] ;
-		joursPerturb[i] = joursPerturb[jj] ;
-		joursPerturb[jj] = temp ;
-	}
+    // We pick j1 and j2. j1 < j2 < nbDays
+    generateN1AndN2ForSplitPopulation(j1, j2);
 
-	// We pick j1 and j2
-	j1 = rand() % params->nbDays ;
-	j2 = rand() % params->nbDays ;
-	if (j1 > j2)
-	{
-		temp = j2 ;
-		j2 = j1 ;
-		j1 = temp ;
-	}
-
-	for (int k = 0 ; k <= params->nbDays ; k ++ ) 
+    // init keep2, store the incomplete chromT
+	for (int k = 0 ; k <= params->nbDays ; k ++ )
 		keep2.push_back(empty);
 
 	// Inheriting the visits
 	for (int k = 0 ; k < params->nbDays ; k ++ )
 	{
-		day = joursPerturb[k];
+		day = daysDisturb[k];
 
-		// First case, we copy a segment (these visits will be temporarily kept in the data structure "keep2")
+		// First case, we copy a segment (these visits will be temporarily kept in the data structure "keep2") ^mix
 		if (k < j1 && !offspring->chromT[day].empty())
 		{
+		    // generate alpha_i and beta_i
             start = (int)(rand() % offspring->chromT[day].size()) ;
             end = (int)(rand() % offspring->chromT[day].size()) ;
 			boardEnd.push_back(end);
@@ -411,18 +392,21 @@ int Genetic::crossPIX ()
 			}
 			offspring->chromT[day].clear();
 		}
-		else if (k < j2) // Second case, we copy nothing on this day
+		else if (k < j2) // Second case, we copy nothing on this day ^2
 		{
 			offspring->chromT[day].clear() ;
 			boardEnd.push_back(-1);
 		}
-		else // Third case, we copy everything on this day
+		else // Third case, we copy everything on this day ^1 set
 		{
 			boardEnd.push_back(0);
+			// 遍历的是某一天的所有tour
 			for (j=0 ; j < (int)offspring->chromT[day].size() ; j++)
 			{
 				freqClient[offspring->chromT[day][j]] -= 1 ;
+				// pattern 实际上是按位编码的, day0 在最高位 dayN在最低位
                 offspring->chromP[offspring->chromT[day][j]].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
+                // dep的赋值: nbDay 实际值是 nbDay * nbDepot 通过 day - 1 / nbDays 落到实际的depot的编号上
                 offspring->chromP[offspring->chromT[day][j]].dep = (day - 1) / params->formerNbDays ;
 			}
 		}
@@ -431,7 +415,7 @@ int Genetic::crossPIX ()
 	// We complete with the second parent
 	for (int k = 0 ; k < params->nbDays ; k ++ )
 	{
-		day = joursPerturb[k] ;
+		day = daysDisturb[k] ;
         end = boardEnd[k] ;
 		if (k < j2)
 		{
@@ -496,6 +480,41 @@ int Genetic::crossPIX ()
 	offspring->updateIndiv();
 
 	return 0 ;
+}
+
+void Genetic::generateN1AndN2ForSplitPopulation(int &j1, int &j2) const {
+    int temp;
+    j1 = rand() % params->nbDays ;
+    j2 = rand() % params->nbDays ;
+    if (j1 > j2)
+    {
+        temp = j2 ;
+        j2 = j1 ;
+        j1 = temp ;
+    }
+}
+
+void Genetic::initialInCrossPIX()  {
+    int i;
+    for (i=0 ; i < params->nbClients + params->nbDepots ; i++ )
+    {
+        freqClient[i] = params->cli[i].freq ;
+        offspring->chromP[i].pat = 0 ;
+        offspring->chromP[i].dep = -1 ;
+    }
+}
+
+void Genetic::disturbDays(vector<int> &daysDisturb) const {
+    int i, jj, temp;
+    for (int k=1 ; k <= params->nbDays ; k++ )
+        daysDisturb.push_back(k) ;
+    for (i = 0 ; i < (int)daysDisturb.size() ; i++)
+    {
+        jj = i + rand() % ((int)daysDisturb.size() - i) ;
+        temp = daysDisturb[i] ;
+        daysDisturb[i] = daysDisturb[jj] ;
+        daysDisturb[jj] = temp ;
+    }
 }
 
 Genetic::Genetic(Params * params,Population * population, clock_t ticks, bool traces) : 
