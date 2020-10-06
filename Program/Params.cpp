@@ -629,17 +629,14 @@ Params::~Params(void)
 	delete [] cli ;
 }
 
-void Params::shuffleProches () 
-{
-	int temp,temp2 ;
+void Params::shuffleClose() {
+    int temp, temp2;
 
-	// Shuffling the list of close customers for each customer
-	for (int i=nbDepots ; i < nbClients + nbDepots ; i++)
-	{
-		for (int a1 = 0 ; a1 < (int)cli[i].sommetsVoisins.size()-1 ; a1++ )
-		{
-			temp2 = a1 + rand() % ((int)cli[i].sommetsVoisins.size() - a1) ;
-			temp =  cli[i].sommetsVoisins[a1] ;
+    // Shuffling the list of close customers for each customer
+    for (int i = nbDepots; i < nbClients + nbDepots; i++) {
+        for (int a1 = 0; a1 < (int) cli[i].sommetsVoisins.size() - 1; a1++) {
+            temp2 = a1 + rand() % ((int) cli[i].sommetsVoisins.size() - a1);
+            temp = cli[i].sommetsVoisins[a1];
 			cli[i].sommetsVoisins[a1] = cli[i].sommetsVoisins[temp2];
 			cli[i].sommetsVoisins[temp2] = temp ;
 		}

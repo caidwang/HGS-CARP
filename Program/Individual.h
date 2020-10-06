@@ -160,8 +160,9 @@ public:
 	list <proxData> plusProches ;
 
 	// functions to manage the "plusProches" structure
-	void addProche(Individual * indiv) ;
-	void removeProche(Individual * indiv) ;
+    void addClose(Individual *indiv);
+
+    void removeProche(Individual *indiv);
 
 	// average distance with the n closest individuals
 	double distPlusProche(int n) ;

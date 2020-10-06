@@ -215,7 +215,7 @@ public:
 	void processDataStructuresMD () ;
 	
 	// shuffle the lists of closest customers
-	void shuffleProches () ;
+    void shuffleClose();
 
 	// constructor
 	Params(string nomInstance, string nomSolution, string nomBKS, int seedRNG, int type, int nbVeh, int nbDep, bool isSearchingFeasible);

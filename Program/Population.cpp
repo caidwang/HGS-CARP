@@ -20,18 +20,18 @@
 
 Population::Population(Params * params) : params(params)
 {
-	Individual * randomIndiv ;
-	valides = new SousPop();
-	invalides = new SousPop();
-	valides->nbIndiv = 0 ;
-	invalides->nbIndiv = 0 ;
-	double temp, temp2 ;
-	bool feasibleFound = false ;
+    Individual *randomIndiv;
+    valides = new SubPop();
+    invalides = new SubPop();
+    valides->nbIndiv = 0;
+    invalides->nbIndiv = 0;
+    double temp, temp2;
+    bool feasibleFound = false;
 
-	// Create the trainer
-	trainer = new Individual (params, true) ;
-	delete trainer->localSearch ;
-	trainer->localSearch = new LocalSearch(params,trainer) ; // Initialize the LS structure
+    // Create the trainer
+    trainer = new Individual(params, true);
+    delete trainer->localSearch;
+    trainer->localSearch = new LocalSearch(params, trainer); // Initialize the LS structure
 
 	// Creating the initial populations
 	for (int i=0 ; i < params->mu && (!params->isSearchingFeasible || !feasibleFound) ; i++ )
@@ -40,18 +40,18 @@ Population::Population(Params * params) : params(params)
 		education(randomIndiv);
 		addIndividu(randomIndiv) ;
 		updateNbValides(randomIndiv);
-		if (!randomIndiv->isValid)
-		{
-			temp = params->penalityCapa ;
-			temp2 = params->penalityLength ;
-			params->penalityCapa *= 10 ;
-			params->penalityLength *= 10 ;
+		if (!randomIndiv->isValid) {
+            // 这里的惩罚系数更新和文章中存在出入? 不存在出入, 临时提高, 在29行后恢复, 按照repair的逻辑恢复可行解, 文章中的调整过程在函数gererPenalites中
+            temp = params->penalityCapa;
+            temp2 = params->penalityLength;
+            params->penalityCapa *= 10;
+            params->penalityLength *= 10;
 
-			trainer->recopieIndividu(trainer,randomIndiv);
-			trainer->generalSplit();
-			trainer->updateLS();
-			trainer->localSearch->runSearchTotal();
-			trainer->updateIndiv();
+            trainer->recopieIndividu(trainer, randomIndiv);
+            trainer->generalSplit();
+            trainer->updateLS();
+            trainer->localSearch->runSearchTotal();
+            trainer->updateIndiv();
 			params->penalityCapa = temp ;
 			params->penalityLength = temp2 ;
 			trainer->generalSplit();
@@ -93,61 +93,56 @@ Population::~Population()
 	delete trainer ;
 }
 
-void Population::evalExtFit(SousPop * pop)
-{
-	int temp ;
-	vector <int> classement ;
-	vector <double> distances ;
+// compute the biased fitness of the individuals in the population
+void Population::evalExtFit(SubPop *pop) {
+    int temp;
+    vector<int> ranking;
+    vector<double> distances;
 
-	for (int i = 0 ; i < pop->nbIndiv ; i++ )
-	{
-		classement.push_back(i) ;
-		distances.push_back(pop->individus[i]->distPlusProche(params->nbCountDistMeasure)) ;
-	}
+    for (int i = 0; i < pop->nbIndiv; i++) {
+        ranking.push_back(i);
+        distances.push_back(pop->individus[i]->distPlusProche(params->nbCountDistMeasure));
+    }
 
-	// Ranking the individuals in terms of contribution to diversity
-	for (int n = 0 ; n < pop->nbIndiv ; n++ )
+    // Ranking the individuals in terms of contribution to diversity
+    for (int n = 0; n < pop->nbIndiv; n++)
 	{
-		for (int i = 0 ; i < pop->nbIndiv - n - 1 ; i++ )
-		{
-			if ( distances[classement[i]] < distances[classement[i+1]] - 0.000001 )
-			{
-				temp = classement[i+1] ;
-				classement[i+1] = classement[i] ;
-				classement[i] = temp ;
-			}
-		}
+		for (int i = 0 ; i < pop->nbIndiv - n - 1 ; i++ ) {
+            if (distances[ranking[i]] < distances[ranking[i + 1]] - 0.000001) {
+                temp = ranking[i + 1];
+                ranking[i + 1] = ranking[i];
+                ranking[i] = temp;
+            }
+        }
 	}
 
 	// Computing the biased fitness
-	for (int i = 0 ; i < pop->nbIndiv ; i++ )
-	{
-		pop->individus[classement[i]]->divRank = (float)i/(float)(pop->nbIndiv-1) ;
-		pop->individus[classement[i]]->fitRank = (float)classement[i]/(float)(pop->nbIndiv-1) ;
-		pop->individus[classement[i]]->fitnessExtended = pop->individus[classement[i]]->fitRank + ((float)1.0 - (float)params->el / (float)pop->nbIndiv) * pop->individus[classement[i]]->divRank ;
-	}
+	for (int i = 0 ; i < pop->nbIndiv ; i++ ) {
+        pop->individus[ranking[i]]->divRank = (float) i / (float) (pop->nbIndiv - 1);
+        pop->individus[ranking[i]]->fitRank = (float) ranking[i] / (float) (pop->nbIndiv - 1);
+        pop->individus[ranking[i]]->fitnessExtended = pop->individus[ranking[i]]->fitRank +
+                                                      ((float) 1.0 - (float) params->el / (float) pop->nbIndiv) *
+                                                      pop->individus[ranking[i]]->divRank;
+    }
 }
 
-int Population::addIndividu (Individual * indiv)
-{
-	SousPop * souspop ;
-	int k, result ;
+int Population::addIndividu (Individual * indiv) {
+    SubPop *subPop;
+    int k, result;
 
-	if ( indiv->isValid ) souspop = valides ;
-	else souspop = invalides ;
+    if (indiv->isValid) subPop = valides;
+    else subPop = invalides;
 
-	result = placeIndividu(souspop,indiv);
+    result = placeIndividu(subPop, indiv);
 
-	// Keeping only the survivors if the maximum size of the population has been reached
-	if (result != -1 && souspop->nbIndiv > params->mu + params->lambda )
-	{
-		while ( souspop->nbIndiv > params->mu)
-		{
-			k = selectCompromis(souspop);
-			removeIndividu(souspop,k);
-		}
-	}
-	return result ;
+    // Keeping only the survivors if the maximum size of the population has been reached
+    if (result != -1 && subPop->nbIndiv > params->mu + params->lambda) {
+        while (subPop->nbIndiv > params->mu) {
+            k = selectCompromis(subPop);
+            removeIndividu(subPop, k);
+        }
+    }
+    return result;
 }
 
 int Population::addAllIndividus (Population * pop)
@@ -173,29 +168,27 @@ int Population::addAllIndividus (Population * pop)
 	return 1 ;
 }
 
-void Population::updateProximity (SousPop * pop, Individual * indiv)
-{
-	for (int k=0 ; k < pop->nbIndiv ; k++)
-	{
-		if (pop->individus[k] != indiv) 
-		{
-			pop->individus[k]->addProche(indiv);
-			indiv->addProche(pop->individus[k]);
-		}
-	}
+// update the table of distance (Hamming distance) between individuals to know their proximity
+void Population::updateProximity(SubPop *pop, Individual *indiv) {
+    for (int k = 0; k < pop->nbIndiv; k++) {
+        if (pop->individus[k] != indiv) {
+            pop->individus[k]->addClose(indiv);
+            indiv->addClose(pop->individus[k]);
+        }
+    }
 }
 
-bool Population::fitExist (SousPop * pop, Individual * indiv )
-{
-	int count = 0 ;
-	double distance = indiv->costSol.evaluation ;
-	for (int i=0 ; i < (int)pop->nbIndiv ; i++ )
-	{
-		if (pop->individus[i]->costSol.evaluation >= (distance - 0.01) && pop->individus[i]->costSol.evaluation <= (distance + 0.01))
-			count ++ ;
-	}
-	if (count <= 1) return false ;
-	else return true ;
+// check if there is already a solution with the same fitness in the population
+bool Population::fitExist(SubPop *pop, Individual *indiv) {
+    int count = 0;
+    double distance = indiv->costSol.evaluation;
+    for (int i = 0; i < (int) pop->nbIndiv; i++) {
+        if (pop->individus[i]->costSol.evaluation >= (distance - 0.01) &&
+            pop->individus[i]->costSol.evaluation <= (distance + 0.01))
+            count++;
+    }
+    if (count <= 1) return false;
+    else return true;
 }
 
 void Population::diversify ()
@@ -264,17 +257,15 @@ void Population::clear()
 	}
 }
 
-int Population::placeIndividu(SousPop * pop, Individual * indiv)
-{
-	Individual * monIndiv = new Individual (params, false) ;
-	monIndiv->recopieIndividu (monIndiv , indiv) ;
+int Population::placeIndividu(SubPop *pop, Individual *indiv) {
+    Individual *monIndiv = new Individual(params, false);
+    monIndiv->recopieIndividu(monIndiv, indiv);
 
-	bool placed = false ;
-	int i = (int)pop->individus.size()-1 ;
-	pop->individus.push_back(monIndiv);
-	while ( i >= 0 && !placed )
-	{
-		if (pop->individus[i]->costSol.evaluation >= indiv->costSol.evaluation + 0.001 )
+    bool placed = false;
+    int i = (int) pop->individus.size() - 1;
+    pop->individus.push_back(monIndiv);
+    while (i >= 0 && !placed) {
+        if (pop->individus[i]->costSol.evaluation >= indiv->costSol.evaluation + 0.001)
 		{
 			pop->individus[i+1] = pop->individus[i] ;
 			i -- ;
@@ -301,17 +292,16 @@ int Population::placeIndividu(SousPop * pop, Individual * indiv)
 	return -3 ;
 }
 
-void Population::removeIndividu(SousPop * pop, int p)
-{
-	Individual * partant = pop->individus[p];
+void Population::removeIndividu(SubPop *pop, int p) {
+    Individual *partant = pop->individus[p];
 
-	// Placing the individual at the end
-	for ( int i=p+1 ; i < (int)pop->individus.size() ; i++ )
-		pop->individus[i-1] = pop->individus[i] ;
+    // Placing the individual at the end
+    for (int i = p + 1; i < (int) pop->individus.size(); i++)
+        pop->individus[i - 1] = pop->individus[i];
 
-	// Removing it from the population
-	pop->individus.pop_back();
-	pop->nbIndiv -- ;
+    // Removing it from the population
+    pop->individus.pop_back();
+    pop->nbIndiv--;
 
 	// Removing it from the proximity structures
 	for (int i=0 ; i < pop->nbIndiv ; i++ )
@@ -320,17 +310,17 @@ void Population::removeIndividu(SousPop * pop, int p)
 	delete partant ;
 }
 
-void Population::validatePen (SousPop * souspop)
-{
-	Individual * indiv ;
+void Population::validatePen(SubPop *souspop) {
+    Individual *indiv;
 
-	// Updating Individual Evaluations
-	for (int i = 0 ; i < souspop->nbIndiv ; i++)
-		souspop->individus[i]->costSol.evaluation = souspop->individus[i]->costSol.distance
+    // Updating Individual Evaluations
+    for (int i = 0; i < souspop->nbIndiv; i++)
+        souspop->individus[i]->costSol.evaluation = souspop->individus[i]->costSol.distance
                                                     + params->penalityCapa * souspop->individus[i]->costSol.capacityViol
-                                                    + params->penalityLength * souspop->individus[i]->costSol.lengthViol ;
+                                                    +
+                                                    params->penalityLength * souspop->individus[i]->costSol.lengthViol;
 
-	for (int i = 0 ; i < souspop->nbIndiv ; i++)
+    for (int i = 0; i < souspop->nbIndiv; i++)
 	{
 		for (int j = 0 ; j < souspop->nbIndiv - i - 1; j++)
 		{
@@ -735,17 +725,14 @@ double Population::fractionValidesTemps ()
 	return double(count)/50. ;
 }
 
-double Population::getDiversity(SousPop * pop)
-{
-	double total = 0 ;
-	int count = 0 ;
-	for ( int i=0 ; i < min(pop->nbIndiv,params->mu) ; i++ )
-	{
-		for (int j=i+1 ; j < min(pop->nbIndiv,params->mu) ; j++ )
-		{
-			total += pop->individus[i]->distance(pop->individus[j]);
-			count ++ ;
-		}
+double Population::getDiversity(SubPop *pop) {
+    double total = 0;
+    int count = 0;
+    for (int i = 0; i < min(pop->nbIndiv, params->mu); i++) {
+        for (int j = i + 1; j < min(pop->nbIndiv, params->mu); j++) {
+            total += pop->individus[i]->distance(pop->individus[j]);
+            count++;
+        }
 	}
 	return total / (double)count ;
 } 
@@ -774,17 +761,16 @@ double Population::getAgeValides ()
 	return  ageMoyen / min(valides->nbIndiv,params->mu) ;
 }
 
-int Population::selectCompromis (SousPop * souspop)
-{
-	// Selects one individual to be eliminated from the population
-	vector <int> classement ;
-	int temp, sortant ;
+int Population::selectCompromis(SubPop *souspop) {
+    // Selects one individual to be eliminated from the population
+    vector<int> classement;
+    int temp, sortant;
 
-	updateAge ();
-	evalExtFit(souspop);
+    updateAge();
+    evalExtFit(souspop);
 
-	for (int i=0 ; i < souspop->nbIndiv ; i++)
-		classement.push_back(i);
+    for (int i = 0; i < souspop->nbIndiv; i++)
+        classement.push_back(i);
 
 	// Adding a penalty in case of clone (in the objective space or solution space)
 	for (int i=1 ; i < souspop->nbIndiv ; i++)

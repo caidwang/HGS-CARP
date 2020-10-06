@@ -97,7 +97,7 @@ private:
 	vector <SeqData *> myseqs ; // temporary vector to keep some pointers towards preprocessed data
 
 	// shuffling procedure (for RI)
-	void melangeParcours () ;
+    void shuffleRouteOrder();
 
 	// updating the list of moves (for RI)
 	void updateMoves ();
@@ -122,29 +122,30 @@ private:
 	// change the pattern of "client" if its possible to find a better pattern (PI)
 	int searchBetterPattern (int client);
 	void computeCoutInsertion(Noeud * client, int pattern) ; // subprocedures for PI
-	void evalInsertClient (Route * R, Noeud * U, int pattern) ; // subprocedures for PI
+    void evalInsertClient(Route *R, Noeud *U, int pattern); // subprocedures for PI
 
 public:
 
-	// nbTotal Moves, for printouts
-	int nbTotalRISinceBeginning ;
-	int nbTotalPISinceBeginning ;
+    // nbTotal Moves, for printouts
+    int nbTotalRISinceBeginning;
+    int nbTotalPISinceBeginning;
 
-	// little data structure to choose the order of the exploration of the moves.
-	// updated to contain only the visits in their respective days (PVRP and PCARP), and regularly shuffled
-	vector < vector < int > > ordreParcours ;
-	void addOP (int day, int client) ; // functions for updating the ordreParcours data structure
-	void removeOP (int day, int client) ; // functions for updating the ordreParcours data structure
+    // little data structure to choose the order of the exploration of the moves.
+    // updated to contain only the visits in their respective days (PVRP and PCARP), and regularly shuffled
+    vector<vector<int> > routeOrder;
 
-	// counters on the moves (for printing)
-	int nbInterSwap ;
-	int nbIntraSwap ;
-	int nbInter2Opt ;
-	int nbIntra2Opt ;
-	int nbEjectionChains ;
-	int nbEjectionChainsNodes ;
+    void addOP(int day, int client); // functions for updating the routeOrder data structure
+    void removeOP(int day, int client); // functions for updating the routeOrder data structure
 
-	// for each day, keeping a pointer routeVide[day] on the first empty route (to avoid iterating many identical empty routes) 
+    // counters on the moves (for printing)
+    int nbInterSwap;
+    int nbIntraSwap;
+    int nbInter2Opt;
+    int nbIntra2Opt;
+    int nbEjectionChains;
+    int nbEjectionChainsNodes;
+
+    // for each day, keeping a pointer routeVide[day] on the first empty route (to avoid iterating many identical empty routes)
 	// initially set to NULL
 	vector < Route * > routeVide ;
 	// setting the pointer for a given day

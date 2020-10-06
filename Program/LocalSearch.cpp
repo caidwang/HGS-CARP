@@ -21,18 +21,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void LocalSearch::runSearchTotal ()
 {
-	// Shuffling the order of move evaluations
-	params->shuffleProches();
-	melangeParcours();
-	int nbMoves = 0 ;
+    // Shuffling the order of move evaluations
+    params->shuffleClose();
+    shuffleRouteOrder();
+    int nbMoves = 0;
 
-	/* RUNNING THE LS */
-	// RI -- Route improvement
-	updateMoves ();
-	reinitAllSingleDayMoves();
-	for (int day = 1 ; day <= params->nbDays ; day++)
-		nbMoves += mutationSameDay (day) ;
-	nbTotalRISinceBeginning += nbMoves ;
+    /* RUNNING THE LS */
+    // RI -- Route improvement
+    updateMoves();
+    reinitAllSingleDayMoves();
+    for (int day = 1; day <= params->nbDays; day++)
+        nbMoves += mutationSameDay(day);
+    nbTotalRISinceBeginning += nbMoves;
 
 	// PI and RI local search (only for PCARP and MDCARP, see Vidal et al 2012 (OR)
 	if (params->periodique || params->multiDepot)
@@ -68,29 +68,27 @@ int LocalSearch::mutationSameDay (int day)
 	int size2 ;
 
 	// We search and apply moves until a local minimum is attained
-	while (!rechercheTerminee)
-	{
-		rechercheTerminee = true ;
-		moveEffectue = 0 ;
+	while (!rechercheTerminee) {
+        rechercheTerminee = true;
+        moveEffectue = 0;
 
-		// For every node U in random order
-		for ( int posU = 0 ; posU < (int)ordreParcours[day].size() ; posU ++ )
-		{
-			posU -= moveEffectue ; // We return on the last node if there has been a move
-			nbMoves += moveEffectue ;
-			moveEffectue = 0 ;
-			routeVideTestee = false ;
+        // For every node U in random order
+        for (int posU = 0; posU < (int) routeOrder[day].size(); posU++) {
+            posU -= moveEffectue; // We return on the last node if there has been a move
+            nbMoves += moveEffectue;
+            moveEffectue = 0;
+            routeVideTestee = false;
 
-			noeudU = &clients[day][ordreParcours[day][posU]];
-			routeU = noeudU->route ;
-			vehicleU = routeU->vehicle ;
-			x = noeudU->suiv ;
+            noeudU = &clients[day][routeOrder[day][posU]];
+            routeU = noeudU->route;
+            vehicleU = routeU->vehicle;
+            x = noeudU->suiv;
 
-			// In the CARP, some service removal do not reduce the cost of the route
-			// In this case, very few moves can improve the solution (only 2-opt variants), and thus SWAP and RELOCATE variants do not need to be tested
-			costBeforeRemoval = noeudU->seq0_i->evaluation(routeU->depot->pred->seq0_i,routeU->vehicle);
-			costAfterRemoval = noeudU->seq0_i->evaluation(noeudU->pred->seq0_i,noeudU->suiv->seqi_n,routeU->vehicle);
-			gainWhenRemoving = (costAfterRemoval < costBeforeRemoval - 0.1) ;
+            // In the CARP, some service removal do not reduce the cost of the route
+            // In this case, very few moves can improve the solution (only 2-opt variants), and thus SWAP and RELOCATE variants do not need to be tested
+            costBeforeRemoval = noeudU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle);
+            costAfterRemoval = noeudU->seq0_i->evaluation(noeudU->pred->seq0_i, noeudU->suiv->seqi_n, routeU->vehicle);
+            gainWhenRemoving = (costAfterRemoval < costBeforeRemoval - 0.1);
 
 			// For every node V in random order
 			size2 = (int)noeudU->moves.size();
@@ -235,8 +233,8 @@ int LocalSearch::mutationDifferentDay ()
 	{
 		rechercheTerminee = true ;
 		// Searching for a better insertion place for all customers
-		for ( int posU = 0 ; posU < params->nbClients ; posU ++ )
-			nbMoves += searchBetterPattern(ordreParcours[0][posU]);
+        for (int posU = 0; posU < params->nbClients; posU++)
+            nbMoves += searchBetterPattern(routeOrder[0][posU]);
 		firstLoop = false ;
 	}
 	return nbMoves ;
@@ -1438,38 +1436,33 @@ void LocalSearch::evalInsertClient (Route * R,Noeud * U,int pattern)
 	U->seq1->load = tempDemand ;
 }
 
-void LocalSearch::melangeParcours ()
-{
-	// Shuffling the ordreParcours vector
-	int j,temp ;
-	for (int k = 0 ; k <= params->nbDays ; k++)
-	{
-		for (int i = 0 ; i < (int)ordreParcours[k].size() - 1 ; i++)
-		{
-			j = i + rand() % ((int)ordreParcours[k].size() - i) ;
-			temp = ordreParcours[k][i] ;
-			ordreParcours[k][i] = ordreParcours[k][j] ;
-			ordreParcours[k][j] = temp ;
-		}
-	}
+void LocalSearch::shuffleRouteOrder() {
+    // Shuffling the routeOrder vector
+    int j, temp;
+    for (int k = 0; k <= params->nbDays; k++) {
+        for (int i = 0; i < (int) routeOrder[k].size() - 1; i++) {
+            j = i + rand() % ((int) routeOrder[k].size() - i);
+            temp = routeOrder[k][i];
+            routeOrder[k][i] = routeOrder[k][j];
+            routeOrder[k][j] = temp;
+        }
+    }
 }
 
 void LocalSearch::updateMoves ()
 {
 	int client, client2, size ;
-	for (int k=1 ; k<=params->nbDays ; k++)
-	{
-		for (int i=0 ; i<( int)ordreParcours[k].size() ; i++)
-		{
-			client = ordreParcours[k][i] ;
-			clients[k][client].moves.clear();
-			size = (int)params->cli[client].sommetsVoisinsAvant.size();
-			for (int a1 = 0 ; a1 < size ; a1++ )
-			{
-				client2 = params->cli[client].sommetsVoisinsAvant[a1] ;
-				if (client2 >= params->nbDepots && clients[k][client2].estPresent) clients[k][client].moves.push_back(client2);
-			}
-		}
+	for (int k=1 ; k<=params->nbDays ; k++) {
+        for (int i = 0; i < (int) routeOrder[k].size(); i++) {
+            client = routeOrder[k][i];
+            clients[k][client].moves.clear();
+            size = (int) params->cli[client].sommetsVoisinsAvant.size();
+            for (int a1 = 0; a1 < size; a1++) {
+                client2 = params->cli[client].sommetsVoisinsAvant[a1];
+                if (client2 >= params->nbDepots && clients[k][client2].estPresent)
+                    clients[k][client].moves.push_back(client2);
+            }
+        }
 	}
 }
 
@@ -1625,28 +1618,24 @@ void LocalSearch::addNoeud(Noeud * U, Noeud * V)
 			clients[U->jour][i].coutInsertion[p] = 1.e30 ;
 }
 
-void LocalSearch::removeOP (int day, int client) 
-{
-	// Remove one occurence in the ordreParcours structure
-	int it = 0  ;
-	while (ordreParcours[day][it] != client) { it ++ ; }
-	ordreParcours[day][it] = ordreParcours[day][(int)ordreParcours[day].size() - 1];
-	ordreParcours[day].pop_back();
+void LocalSearch::removeOP (int day, int client) {
+    // Remove one occurence in the routeOrder structure
+    int it = 0;
+    while (routeOrder[day][it] != client) { it++; }
+    routeOrder[day][it] = routeOrder[day][(int) routeOrder[day].size() - 1];
+    routeOrder[day].pop_back();
 }
 
-void LocalSearch::addOP (int day, int client) 
-{
-	// Add one element in the ordreParcours structure
-	int it, temp2 ;
-	if (ordreParcours[day].size() != 0)
-	{
-		it = (int)rand() % ordreParcours[day].size() ;
-		temp2 = ordreParcours[day][it] ;
-		ordreParcours[day][it] = client ;
-		ordreParcours[day].push_back(temp2);
-	}
-	else
-		ordreParcours[day].push_back(client);
+void LocalSearch::addOP (int day, int client) {
+    // Add one element in the routeOrder structure
+    int it, temp2;
+    if (routeOrder[day].size() != 0) {
+        it = (int) rand() % routeOrder[day].size();
+        temp2 = routeOrder[day][it];
+        routeOrder[day][it] = client;
+        routeOrder[day].push_back(temp2);
+    } else
+        routeOrder[day].push_back(client);
 }
 
 void LocalSearch::controlRoutes ()
@@ -1996,14 +1985,13 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 		shouldBeTested.push_back(vector<bool>(4));
 	}
 
-	for (int day = 0 ; day <= params->nbDays ; day++)
-	{
-		ordreParcours.push_back(temp2);
-		routeVide.push_back(NULL);
-	}
+	for (int day = 0 ; day <= params->nbDays ; day++) {
+        routeOrder.push_back(temp2);
+        routeVide.push_back(NULL);
+    }
 
-	for (int i=params->nbDepots ; i < params->nbDepots + params->nbClients ; i++)
-		ordreParcours[0].push_back(i);
+    for (int i = params->nbDepots; i < params->nbDepots + params->nbClients; i++)
+        routeOrder[0].push_back(i);
 
 	// Initialization for ejection chains
 	for (int v=0 ; v < params->nbVehiculesPerDep ; v ++)

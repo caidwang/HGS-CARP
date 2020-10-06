@@ -443,18 +443,18 @@ void Individual::updateLS()
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
-		// we reinitialize the "ordreParcours" vector
-		localSearch->ordreParcours[kk].clear() ; 
+        // we reinitialize the "routeOrder" vector
+        localSearch->routeOrder[kk].clear();
 
-		// we reset the "estPresent" values to false
-		// estPresent 当前客户节点 今天是否被服务
-		for (i=params->nbDepots ; i < params->nbClients + params->nbDepots ; i++)
-			localSearch->clients[kk][i].estPresent = false ;
+        // we reset the "estPresent" values to false
+        // estPresent 当前客户节点 今天是否被服务
+        for (i = params->nbDepots; i < params->nbClients + params->nbDepots; i++)
+            localSearch->clients[kk][i].estPresent = false;
 
-		// using Split results to load the solution in the LS structure
-		j = (int)chromT[kk].size() ;
+        // using Split results to load the solution in the LS structure
+        j = (int) chromT[kk].size();
 
-		for (int jj = 0 ; jj < params->nombreVehicules[kk] ; jj ++ )
+        for (int jj = 0; jj < params->nombreVehicules[kk]; jj++)
 		{
 			depot = params->ordreVehicules[kk][params->nombreVehicules[kk] - jj - 1].depotNumber ;
 			// i -> 前驱节点
@@ -470,51 +470,48 @@ void Individual::updateLS()
 			myDepotFin->pred = myDepot ;
 
 			// a single visit
-			if ( j == i+1 )
-			{
-				myClient = &localSearch->clients[kk][chromT[kk][i]] ;
-				myClient->pred = myDepot ;
-				myClient->suiv = myDepotFin ;
-				myClient->route = myRoute ;
-				myClient->estPresent = true ;
-				localSearch->nodeTestedForEachRoute(myClient->cour,kk);
-				myDepot->suiv = myClient ;
-				myDepotFin->pred = myClient ;
-				localSearch->ordreParcours[kk].push_back(myClient->cour);
-			}
-			else if (j > i+1)
-			{
-				// at least two visits
-				myClient = &localSearch->clients[kk][chromT[kk][i]] ;
-				myClient->pred = myDepot ;
-				myClient->suiv = &localSearch->clients[kk][chromT[kk][i+1]] ;
-				myClient->route = myRoute ;
-				myClient->estPresent = true ;
-				localSearch->nodeTestedForEachRoute(myClient->cour,kk);
-				myDepot->suiv = myClient ;
-				localSearch->ordreParcours[kk].push_back(myClient->cour);
+			if ( j == i+1 ) {
+                myClient = &localSearch->clients[kk][chromT[kk][i]];
+                myClient->pred = myDepot;
+                myClient->suiv = myDepotFin;
+                myClient->route = myRoute;
+                myClient->estPresent = true;
+                localSearch->nodeTestedForEachRoute(myClient->cour, kk);
+                myDepot->suiv = myClient;
+                myDepotFin->pred = myClient;
+                localSearch->routeOrder[kk].push_back(myClient->cour);
+            }
+			else if (j > i+1) {
+                // at least two visits
+                myClient = &localSearch->clients[kk][chromT[kk][i]];
+                myClient->pred = myDepot;
+                myClient->suiv = &localSearch->clients[kk][chromT[kk][i + 1]];
+                myClient->route = myRoute;
+                myClient->estPresent = true;
+                localSearch->nodeTestedForEachRoute(myClient->cour, kk);
+                myDepot->suiv = myClient;
+                localSearch->routeOrder[kk].push_back(myClient->cour);
 
-				// information for the end of the route
-				myClient = &localSearch->clients[kk][chromT[kk][j-1]] ;
-				myClient->pred = &localSearch->clients[kk][chromT[kk][j-2]];
-				myClient->suiv = myDepotFin ;
-				myClient->route = myRoute ;
-				myClient->estPresent = true ;
-				localSearch->nodeTestedForEachRoute(myClient->cour,kk);
-				myDepotFin->pred = myClient ;
-				localSearch->ordreParcours[kk].push_back(myClient->cour);
+                // information for the end of the route
+                myClient = &localSearch->clients[kk][chromT[kk][j - 1]];
+                myClient->pred = &localSearch->clients[kk][chromT[kk][j - 2]];
+                myClient->suiv = myDepotFin;
+                myClient->route = myRoute;
+                myClient->estPresent = true;
+                localSearch->nodeTestedForEachRoute(myClient->cour, kk);
+                myDepotFin->pred = myClient;
+                localSearch->routeOrder[kk].push_back(myClient->cour);
 
-				// and the middle
-				for ( int k = (int)i+1 ; k <= j-2 ; k++ )
-				{
-					myClient = &localSearch->clients[kk][chromT[kk][k]] ;
-					myClient->pred = &localSearch->clients[kk][chromT[kk][k-1]] ;
-					myClient->suiv = &localSearch->clients[kk][chromT[kk][k+1]] ;
-					myClient->route =  myRoute ;
-					myClient->estPresent = true ;
-					localSearch->nodeTestedForEachRoute(myClient->cour,kk);
-					localSearch->ordreParcours[kk].push_back(myClient->cour);
-				}
+                // and the middle
+                for (int k = (int) i + 1; k <= j - 2; k++) {
+                    myClient = &localSearch->clients[kk][chromT[kk][k]];
+                    myClient->pred = &localSearch->clients[kk][chromT[kk][k - 1]];
+                    myClient->suiv = &localSearch->clients[kk][chromT[kk][k + 1]];
+                    myClient->route = myRoute;
+                    myClient->estPresent = true;
+                    localSearch->nodeTestedForEachRoute(myClient->cour, kk);
+                    localSearch->routeOrder[kk].push_back(myClient->cour);
+                }
 			}
 			j = i ;
 		}
@@ -665,17 +662,15 @@ void Individual::computeFollows ()
 }
 
 // 维护个体在种群中相似个体的列表, 列表中个体与该个体的相似程度逐渐降低 proche -> close 相似
-void Individual::addProche(Individual * indiv)
-{
-	// Adding an individual in the structure of proximity (diversity management procedures)
-	list<proxData>::iterator it ;
-	proxData data ; // data about the proximity of an Individual with regards to the others in the population.
-	data.indiv = indiv ;
-	data.dist = distance(indiv);
+void Individual::addClose(Individual *indiv) {
+    // Adding an individual in the structure of proximity (diversity management procedures)
+    list<proxData>::iterator it;
+    proxData data; // data about the proximity of an Individual with regards to the others in the population.
+    data.indiv = indiv;
+    data.dist = distance(indiv);
 
-	if (plusProches.empty()) plusProches.push_back(data);
-	else
-	{
+    if (plusProches.empty()) plusProches.push_back(data);
+    else {
 		it = plusProches.begin();
 		while ( it != plusProches.end() && it->dist < data.dist)
 			++it ;

@@ -261,19 +261,19 @@ void Genetic::repair ()
 	offspring->updateIndiv();
 
 	// If the first tentative failed, second tentative with higher penalty
-	if (!offspring->isValid)
-	{
-		params->penalityCapa *= 10 ;
-		params->penalityLength *= 10 ;
-		offspring->generalSplit();
-		offspring->updateLS();
-		offspring->localSearch->runSearchTotal();
-		offspring->updateIndiv();
-	}
+    if (!offspring->isValid) {
+        params->penalityCapa *= 10;
+        params->penalityLength *= 10;
+        offspring->generalSplit();
+        offspring->updateLS();
+        offspring->localSearch->runSearchTotal();
+        offspring->updateIndiv();
+    }
 
-	params->penalityCapa = temp ;
-	params->penalityLength = temp2 ;
-	offspring->measureSol();
+    // 注意在每次按照10倍提高惩罚系数, 推向可行解时, 最终都需要恢复
+    params->penalityCapa = temp;
+    params->penalityLength = temp2;
+    offspring->measureSol();
 }
 
 void Genetic::gererPenalites ()
@@ -384,8 +384,8 @@ int Genetic::crossPIX ()
 			j = start ;
 			while ( j != ((end + 1) % offspring->chromT[day].size()) )
 			{
-                updateDepotAndPattern(offspring->chromT[day][j], day);
-				keep2[day].push_back(offspring->chromT[day][j]) ;
+                serviceCustom(offspring->chromT[day][j], day);
+                keep2[day].push_back(offspring->chromT[day][j]);
 				j = (j+1) % offspring->chromT[day].size() ;
 			}
 			offspring->chromT[day].clear();
@@ -401,7 +401,7 @@ int Genetic::crossPIX ()
 			// 遍历的是某一天的所有tour
 			for (j=0 ; j < (int)offspring->chromT[day].size() ; j++)
 			{
-                updateDepotAndPattern(offspring->chromT[day][j], day);
+                serviceCustom(offspring->chromT[day][j], day);
 			}
 		}
 	}
@@ -413,17 +413,20 @@ int Genetic::crossPIX ()
         end = boardEnd[k] ;
 		if (k < j2)
 		{
-			for (i=0 ; i < (int)offspring2->chromT[day].size() ; i++)
-			{
-				ii = offspring2->chromT[day][(i + end + 1) % (int)offspring2->chromT[day].size() ] ;
-				if (freqClient[ii] != 0
-					&& params->cli[ii].jourSuiv[offspring->chromP[ii].pat][(day - 1) % params->formerNbDays + 1] == (int)((day - 1) % params->formerNbDays + 1)
-					&& (offspring->chromP[ii].dep == -1 || offspring->chromP[ii].dep == (day - 1) / params->formerNbDays ))
-				{
-					offspring->chromT[day].push_back(ii);
-                    updateDepotAndPattern(ii, day);
-				}
-			}
+			for (i=0 ; i < (int)offspring2->chromT[day].size() ; i++) {
+                // customer not in temp tour
+                ii = offspring2->chromT[day][(i + end + 1) % (int) offspring2->chromT[day].size()];
+                bool ableToAppend = freqClient[ii] != 0
+                                    && params->cli[ii].jourSuiv[offspring->chromP[ii].pat][
+                                               (day - 1) % params->formerNbDays + 1] ==
+                                       (int) ((day - 1) % params->formerNbDays + 1)
+                                    && (offspring->chromP[ii].dep == -1 ||
+                                        offspring->chromP[ii].dep == (day - 1) / params->formerNbDays);
+                if (ableToAppend) {
+                    offspring->chromT[day].push_back(ii);
+                    serviceCustom(ii, day);
+                }
+            }
 		}
 	}
 
@@ -498,23 +501,27 @@ void Genetic::initialInCrossPIX()  {
 
 void Genetic::disturbDays(vector<int> &daysDisturb) const {
     int i, jj, temp;
-    for (int k=1 ; k <= params->nbDays ; k++ )
-        daysDisturb.push_back(k) ;
-    for (i = 0 ; i < (int)daysDisturb.size() ; i++)
-    {
-        jj = i + rand() % ((int)daysDisturb.size() - i) ;
-        temp = daysDisturb[i] ;
-        daysDisturb[i] = daysDisturb[jj] ;
-        daysDisturb[jj] = temp ;
+    for (int k = 1; k <= params->nbDays; k++)
+        daysDisturb.push_back(k);
+    for (i = 0; i < (int) daysDisturb.size(); i++) {
+        jj = i + rand() % ((int) daysDisturb.size() - i);
+        temp = daysDisturb[i];
+        daysDisturb[i] = daysDisturb[jj];
+        daysDisturb[jj] = temp;
     }
 }
 
-void Genetic::updateDepotAndPattern(int customerVertexIdx, int day) {
-    freqClient[customerVertexIdx] -= 1 ;
+/**
+ * 为customerIdx指定的用户在day对应的日期进行一次服务, 对应更新用户的剩余需要服务的次数, 用户的服务模式, 用户的对应仓点
+ * @param customerVertexIdx 客户id
+ * @param dayMultiDepot nbDay * nbDepot
+ */
+void Genetic::serviceCustom(int customerVertexIdx, int dayMultiDepot) {
+    freqClient[customerVertexIdx] -= 1;
     // pattern 实际上是按位编码的, day0 在最高位 dayN在最低位
-    offspring->chromP[customerVertexIdx].pat += (int)pow((float)2, (int)((params->nbDays - day) % params->formerNbDays)) ;
-    // dep的赋值: nbDay 实际值是 nbDay * nbDepot 通过 day - 1 / nbDays 落到实际的depot的编号上
-    offspring->chromP[customerVertexIdx].dep = (day - 1) / params->formerNbDays ;
+    offspring->chromP[customerVertexIdx].pat += 1 << ((int) ((params->nbDays - dayMultiDepot) % params->formerNbDays));
+    // dep的赋值: nbDay 实际值是 nbDay * nbDepot 通过 dayMultiDepot - 1 / nbDays 落到实际的depot的编号上
+    offspring->chromP[customerVertexIdx].dep = (dayMultiDepot - 1) / params->formerNbDays;
 }
 
 Genetic::Genetic(Params * params,Population * population, clock_t ticks, bool traces) :

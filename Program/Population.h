@@ -29,13 +29,12 @@
 using namespace std ;
 
 // Structure to manage a sub-population (feasible or infeasible solutions)
-struct SousPop
-{
-	// Individuals
-	vector <Individual *> individus ;
+struct SubPop {
+    // Individuals
+    vector<Individual *> individus;
 
-	// Number of Individuals
-	int nbIndiv ;
+    // Number of Individuals
+    int nbIndiv;
 };
 
 class Population
@@ -51,9 +50,9 @@ class Population
    // Education procedure (LS)
    void education(Individual * indiv);
 
-   // Place an individual in the population
-   // Returns its position
-   int placeIndividu (SousPop * pop, Individual * indiv);
+    // Place an individual in the population
+    // Returns its position
+    int placeIndividu(SubPop *pop, Individual *indiv);
 
    public:
 
@@ -66,12 +65,12 @@ class Population
    // Auxiliary data structure (Individual) with all local search data structures
    // To do the LS on a given individual, we simply copy in this individual and run the LS there.
    Individual * trainer;
-	   
-   // check if there is already a solution with the same fitness in the population
-   bool fitExist (SousPop * pop, Individual * indiv ) ;
 
-   // compute the biased fitness of the individuals in the population
-   void evalExtFit(SousPop * pop);
+    // check if there is already a solution with the same fitness in the population
+    bool fitExist(SubPop *pop, Individual *indiv);
+
+    // compute the biased fitness of the individuals in the population
+    void evalExtFit(SubPop *pop);
 
    // add an individual in the population
    int addIndividu (Individual * indiv);
@@ -79,39 +78,39 @@ class Population
    // add all individuals from another population
    int addAllIndividus (Population * pop);
 
-   // remove an individual in the population (chosen accoding to the biased fitness)
-   void removeIndividu(SousPop * pop, int p);
-   
-   // subprocedure that chooses an individual to be removed
-   int selectCompromis (SousPop * souspop) ; 
+    // remove an individual in the population (chosen accoding to the biased fitness)
+    void removeIndividu(SubPop *pop, int p);
 
-   // update the table of distance (Hamming distance) between individuals to know their proximity
-   void updateProximity (SousPop * pop, Individual * indiv);
+    // subprocedure that chooses an individual to be removed
+    int selectCompromis(SubPop *souspop);
 
-   // Diversification procedure (replace a large part of the population by new random solutions)
-   void diversify ();
+    // update the table of distance (Hamming distance) between individuals to know their proximity
+    void updateProximity(SubPop *pop, Individual *indiv);
 
-   // Clear (no more individual in the population), used only in the ILS version of the code
-   void clear();
-	   
-   // Feasible and Infeasible subpopulations
-   SousPop * valides;
-   SousPop * invalides;
+    // Diversification procedure (replace a large part of the population by new random solutions)
+    void diversify();
 
-   // Get one individual per binary tournament
-   Individual * getIndividuBinT ();
+    // Clear (no more individual in the population), used only in the ILS version of the code
+    void clear();
 
-   // Get one individual with uniform probability in a percentage of the best
-   Individual * getIndividuPourc (int pourcentage);
+    // Feasible and Infeasible subpopulations
+    SubPop *valides;
+    SubPop *invalides;
 
-   // Get best feasible individual
-   Individual * getIndividuBestValide ();
+    // Get one individual per binary tournament
+    Individual *getIndividuBinT();
+
+    // Get one individual with uniform probability in a percentage of the best
+    Individual *getIndividuPourc(int pourcentage);
+
+    // Get best feasible individual
+    Individual *getIndividuBestValide();
 
    // Get best infeasible individual
    Individual * getIndividuBestInvalide ();
 
-   // when the penalty coefficient change, need to recompute properly the fitness of the individuals in the population
-   void validatePen (SousPop * souspop);
+    // when the penalty coefficient change, need to recompute properly the fitness of the individuals in the population
+    void validatePen(SubPop *souspop);
 
    //////////////////////////////////////////////////////////
 
@@ -134,8 +133,8 @@ class Population
    // get the fraction of valid individuals with respect to the time constraint
    double fractionValidesTemps () ;
 
-   // get the diversity of the population
-   double getDiversity(SousPop * pop);
+    // get the diversity of the population
+    double getDiversity(SubPop *pop);
 
    // get the average cost of a feasible solution in the population
    double getMoyenneValides ();
