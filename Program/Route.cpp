@@ -63,94 +63,89 @@ void Route::reverse ()
 	}
 }
 
+// CARP的子问题的求解在这部分完成
 void Route::updateRouteData (bool isForPrinting)
 {
-	bool firstIt ;
-	int place = 0 ;
-	double Xvalue = 0 ;
-	double Yvalue = 0 ;
-	double nbNodes = 1 ;
+    bool firstIt ;
+    int place = 0 ;
+    double Xvalue = 0 ;
+    double Yvalue = 0 ;
+    double nbNodes = 1 ;
 
-	// Computing the auxiliary data on any subsequence (0..i), using forward recursion
-	Noeud * noeud = depot ;
-	noeud->place = place ;
-	noeud->seq0_i->initialisation(noeud->cour,params,individu,day,isForPrinting);
-	noeud->seqi_0->initialisation(noeud->cour,params,individu,day,false);
-	Xvalue += params->cli[noeud->cour].coord.x ;
-	Yvalue += params->cli[noeud->cour].coord.y ;
+    // Computing the auxiliary data on any subsequence (0..i), using forward recursion
+    Noeud * noeud = depot ;
+    noeud->place = place ;
+    noeud->seq0_i->initialisation(noeud->cour,params,individu,day,isForPrinting);
+    noeud->seqi_0->initialisation(noeud->cour,params,individu,day,false);
+    Xvalue += params->cli[noeud->cour].coord.x ;
+    Yvalue += params->cli[noeud->cour].coord.y ;
 
-	firstIt = true ;
-	while (!noeud->estUnDepot || firstIt)
-	{
-		firstIt = false ;
-		noeud = noeud->suiv ;
-		Xvalue += params->cli[noeud->cour].coord.x ;
-		Yvalue += params->cli[noeud->cour].coord.y ;
-		nbNodes ++ ;
-		place ++ ;
-		noeud->place = place ;
-		if (isForPrinting)
-			noeud->seq0_i->concatOneAfterWithPathTracking(noeud->pred->seq0_i,noeud->cour,individu,day);
-		else
-			noeud->seq0_i->concatOneAfter(noeud->pred->seq0_i,noeud->cour,individu,day);
-		noeud->seqi_0->concatOneBefore(noeud->pred->seqi_0,noeud->cour,individu,day);
-	}
+    firstIt = true ;
+    while (!noeud->estUnDepot || firstIt) {
+        firstIt = false ;
+        noeud = noeud->suiv ;
+        Xvalue += params->cli[noeud->cour].coord.x ;
+        Yvalue += params->cli[noeud->cour].coord.y ;
+        nbNodes ++ ;
+        place ++ ;
+        noeud->place = place ;
+        if (isForPrinting)
+            noeud->seq0_i->concatOneAfterWithPathTracking(noeud->pred->seq0_i,noeud->cour,individu,day);
+        else
+            noeud->seq0_i->concatOneAfter(noeud->pred->seq0_i,noeud->cour,individu,day);
+        noeud->seqi_0->concatOneBefore(noeud->pred->seqi_0,noeud->cour,individu,day);
+    }
 
-	// Computing the auxiliary data on any subsequence (i..n), using backward recursion
-	noeud = depot->pred ;
-	noeud->seqi_n->initialisation(noeud->cour,params,individu,day,false);
-	noeud->seqn_i->initialisation(noeud->cour,params,individu,day,false);
+    // Computing the auxiliary data on any subsequence (i..n), using backward recursion
+    noeud = depot->pred ;
+    noeud->seqi_n->initialisation(noeud->cour,params,individu,day,false);
+    noeud->seqn_i->initialisation(noeud->cour,params,individu,day,false);
 
-	firstIt = true ;
-	while ( !noeud->estUnDepot || firstIt )
-	{
-		firstIt = false ;
-		noeud = noeud->pred ;
-		noeud->seqi_n->concatOneBefore(noeud->suiv->seqi_n,noeud->cour,individu,day);
-		noeud->seqn_i->concatOneAfter(noeud->suiv->seqn_i,noeud->cour,individu,day);
-	}
+    firstIt = true ;
+    while ( !noeud->estUnDepot || firstIt ) {
+        firstIt = false ;
+        noeud = noeud->pred ;
+        noeud->seqi_n->concatOneBefore(noeud->suiv->seqi_n,noeud->cour,individu,day);
+        noeud->seqn_i->concatOneAfter(noeud->suiv->seqn_i,noeud->cour,individu,day);
+    }
 
-	// Computing the auxiliary data on any subsequence (i..j), using forward recursion
-	// To gain a bit of time, we limit this preprocessing to subsequences such that i..j does not contain more than "sizeSD" elements
-	// (More intelligent strategies could be used (e.g., the hierarchical approach of Irnich))
-	Noeud * noeudi ;
-	Noeud * noeudj ;
-	noeudi = depot ;
-	for (int i=0 ; i <= depot->pred->place ; i++)
-	{
-		noeudi->seqi_j[0]->initialisation(noeudi->cour,params,individu,day,false);
-		noeudj = noeudi->suiv ;
-		for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++)
-		{
-			noeudi->seqi_j[j]->concatOneAfter(noeudi->seqi_j[j-1],noeudj->cour,individu,day);
-			noeudj = noeudj->suiv ;
-		}
-		noeudi = noeudi->suiv ;
-	}
+    // Computing the auxiliary data on any subsequence (i..j), using forward recursion
+    // To gain a bit of time, we limit this preprocessing to subsequences such that i..j does not contain more than "sizeSD" elements
+    // (More intelligent strategies could be used (e.g., the hierarchical approach of Irnich))
+    Noeud * noeudi ;
+    Noeud * noeudj ;
+    noeudi = depot ;
+    for (int i=0 ; i <= depot->pred->place ; i++) {
+        noeudi->seqi_j[0]->initialisation(noeudi->cour,params,individu,day,false);
+        noeudj = noeudi->suiv ;
+        for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++) {
+            noeudi->seqi_j[j]->concatOneAfter(noeudi->seqi_j[j-1],noeudj->cour,individu,day);
+            noeudj = noeudj->suiv ;
+        }
+        noeudi = noeudi->suiv ;
+    }
 
-	noeudi = depot->pred ;
-	for (int i=0 ; i <= depot->pred->place ; i++)
-	{
-		noeudi->seqj_i[0]->initialisation(noeudi->cour,params,individu,day,false);
-		noeudj = noeudi->pred ;
-		for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++)
-		{
-			noeudj->seqj_i[j]->concatOneAfter(noeudj->suiv->seqj_i[j-1],noeudj->cour,individu,day);
-			noeudj = noeudj->pred ;
-		}
-		noeudi = noeudi->pred ;
-	}
+    noeudi = depot->pred ;
+    for (int i=0 ; i <= depot->pred->place ; i++) {
+        noeudi->seqj_i[0]->initialisation(noeudi->cour,params,individu,day,false);
+        noeudj = noeudi->pred ;
+        for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++) {
+            noeudj->seqj_i[j]->concatOneAfter(noeudj->suiv->seqj_i[j-1],noeudj->cour,individu,day);
+            noeudj = noeudj->pred ;
+        }
+        noeudi = noeudi->pred ;
+    }
 
-	// Checking the route feasibility
-	double dist ;
-	double violLoad ;
-	double violDuration ;
-	currentRouteCost = depot->pred->seq0_i->evaluation(depot->pred->seq0_i,depot->seq1,this->vehicle,dist,violDuration,violLoad);
-	
-	if (violDuration < 0.001 && violLoad < 0.001) 
-		isFeasible = true ;
-	else 
-		isFeasible = false ;
+    // Checking the route feasibility
+    double dist ;
+    double violLoad ;
+    double violDuration ;
+    currentRouteCost = depot->pred->seq0_i->evaluation(depot->pred->seq0_i,depot->seq1,this->vehicle,dist,violDuration,violLoad);
+
+    if (violDuration < 0.001 && violLoad < 0.001)
+        isFeasible = true ;
+    else
+        isFeasible = false ;
 }
 
 // no insertion are computed

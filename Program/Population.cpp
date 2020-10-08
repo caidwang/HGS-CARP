@@ -310,28 +310,26 @@ void Population::removeIndividu(SubPop *pop, int p) {
 	delete partant ;
 }
 
-void Population::validatePen(SubPop *souspop) {
+// when the penalty coefficient change, need to recompute properly the fitness of the individuals in the population
+void Population::validatePen(SubPop *subPop) {
     Individual *indiv;
 
     // Updating Individual Evaluations
-    for (int i = 0; i < souspop->nbIndiv; i++)
-        souspop->individus[i]->costSol.evaluation = souspop->individus[i]->costSol.distance
-                                                    + params->penalityCapa * souspop->individus[i]->costSol.capacityViol
-                                                    +
-                                                    params->penalityLength * souspop->individus[i]->costSol.lengthViol;
+    for (int i = 0; i < subPop->nbIndiv; i++)
+        subPop->individus[i]->costSol.evaluation = subPop->individus[i]->costSol.distance
+                                                   + params->penalityCapa * subPop->individus[i]->costSol.capacityViol
+                                                   +
+                                                   params->penalityLength * subPop->individus[i]->costSol.lengthViol;
 
-    for (int i = 0; i < souspop->nbIndiv; i++)
-	{
-		for (int j = 0 ; j < souspop->nbIndiv - i - 1; j++)
-		{
-			if (souspop->individus[j]->costSol.evaluation >= souspop->individus[j + 1]->costSol.evaluation + 0.01 )
-			{
-				indiv = souspop->individus[j] ;
-				souspop->individus[j] = souspop->individus[j+1] ;
-				souspop->individus[j+1] = indiv ;
-			}
-		}
-	}
+    for (int i = 0; i < subPop->nbIndiv; i++) {
+        for (int j = 0; j < subPop->nbIndiv - i - 1; j++) {
+            if (subPop->individus[j]->costSol.evaluation >= subPop->individus[j + 1]->costSol.evaluation + 0.01) {
+                indiv = subPop->individus[j];
+                subPop->individus[j] = subPop->individus[j + 1];
+                subPop->individus[j + 1] = indiv;
+            }
+        }
+    }
 }
 
 Individual * Population::getIndividuBinT ()

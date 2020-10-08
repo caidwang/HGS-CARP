@@ -54,29 +54,29 @@ void LocalSearch::runSearchTotal ()
 	}
 }
 
-int LocalSearch::mutationSameDay (int day)
-{
-	// Local Search for one given day
-	// Based on the classic moves (Relocate, Swap, CROSS, 2-Opt and 2-Opt*)
-	rechercheTerminee = false ;
-	double costBeforeRemoval, costAfterRemoval;
-	bool gainWhenRemoving ;
-	int moveEffectue = 0;
-	int nbMoves = 0;
-	bool routeVideTestee ;
-	Noeud * tempNoeud ;
-	int size2 ;
+// main function for the RI procedure 突变过程
+int LocalSearch::mutationSameDay (int day) {
+    // Local Search for one given day
+    // Based on the classic moves (Relocate, Swap, CROSS, 2-Opt and 2-Opt*)
+    rechercheTerminee = false;
+    double costBeforeRemoval, costAfterRemoval;
+    bool gainWhenRemoving;
+    int movePerformed = 0;
+    int nbMoves = 0;
+    bool routeVideTestee;
+    Noeud *tempNoeud;
+    int size2;
 
-	// We search and apply moves until a local minimum is attained
-	while (!rechercheTerminee) {
+    // We search and apply moves until a local minimum is attained
+    while (!rechercheTerminee) {
         rechercheTerminee = true;
-        moveEffectue = 0;
+        movePerformed = 0;
 
         // For every node U in random order
         for (int posU = 0; posU < (int) routeOrder[day].size(); posU++) {
-            posU -= moveEffectue; // We return on the last node if there has been a move
-            nbMoves += moveEffectue;
-            moveEffectue = 0;
+            posU -= movePerformed; // We return on the last node if there has been a move
+            nbMoves += movePerformed;
+            movePerformed = 0;
             routeVideTestee = false;
 
             noeudU = &clients[day][routeOrder[day][posU]];
@@ -86,134 +86,127 @@ int LocalSearch::mutationSameDay (int day)
 
             // In the CARP, some service removal do not reduce the cost of the route
             // In this case, very few moves can improve the solution (only 2-opt variants), and thus SWAP and RELOCATE variants do not need to be tested
+            // 去除不必要的LS步骤以缩小LS的搜索空间
             costBeforeRemoval = noeudU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle);
             costAfterRemoval = noeudU->seq0_i->evaluation(noeudU->pred->seq0_i, noeudU->suiv->seqi_n, routeU->vehicle);
             gainWhenRemoving = (costAfterRemoval < costBeforeRemoval - 0.1);
 
-			// For every node V in random order
-			size2 = (int)noeudU->moves.size();
-			for ( int posV = 0 ; posV < size2 && moveEffectue == 0 ; posV ++ )
-			{
-				noeudV = &clients[day][noeudU->moves[posV]] ;
-				routeV = noeudV->route ;
-				vehicleV = routeV->vehicle ;
+            // For every node V in random order
+            size2 = (int) noeudU->moves.size();
+            // U,V两个node的操作 O(N^2)
+            for (int posV = 0; posV < size2 && movePerformed == 0; posV++) {
+                noeudV = &clients[day][noeudU->moves[posV]];
+                routeV = noeudV->route;
+                vehicleV = routeV->vehicle;
 
-				// If we have not yet tested the moves involving the node U and the route of node V
-				// (This flag is reset to false as soon as there is a modification in the route)
-				if (!noeudV->route->nodeAndRouteTested[noeudU->cour])
-				{
-					y = noeudV->suiv ;
-					if (routeV->cour != routeU->cour)
-					{
-						if (moveEffectue != 1)
-						{
-							tempNoeud = noeudV ;
-							noeudV = noeudV->suiv ;
-							y = noeudV->suiv ;
-							// Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV 
-							// Case where they are in different routes
-							if (gainWhenRemoving) moveEffectue = interRouteGeneralInsert(); 
-							noeudV = tempNoeud ;
-							y = noeudV->suiv ;
-						}
+                // If we have not yet tested the moves involving the node U and the route of node V
+                // (This flag is reset to false as soon as there is a modification in the route)
+                if (!noeudV->route->nodeAndRouteTested[noeudU->cour]) {
+                    y = noeudV->suiv;
+                    if (routeV->cour != routeU->cour) {
+                        if (movePerformed != 1) {
+                            tempNoeud = noeudV;
+                            noeudV = noeudV->suiv;
+                            y = noeudV->suiv;
+                            // Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV
+                            // Case where they are in different routes
+                            if (gainWhenRemoving) movePerformed = interRouteGeneralInsert();
+                            noeudV = tempNoeud;
+                            y = noeudV->suiv;
+                        }
 
-						// 2-Opt*
-						if (moveEffectue != 1) 
-							moveEffectue = interRoute2Opt ();
+                        // 2-Opt*
+                        if (movePerformed != 1)
+                            movePerformed = interRoute2Opt();
 
-						// 2-Opt* (second type, where the routes can be reversed)
-						if (moveEffectue != 1) 
-							moveEffectue = interRoute2OptInv ();
-					}
-					else
-					{
-						tempNoeud = noeudV ;
-						noeudV = noeudV->suiv ;
-						y = noeudV->suiv ;
+                        // 2-Opt* (second type, where the routes can be reversed)
+                        if (movePerformed != 1)
+                            movePerformed = interRoute2OptInv();
+                    } else {
+                        tempNoeud = noeudV;
+                        noeudV = noeudV->suiv;
+                        y = noeudV->suiv;
 
-						// Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV 
-						// Case where they are in the same route
-						if (moveEffectue != 1 && gainWhenRemoving) 
-							moveEffectue = intraRouteGeneralInsertDroite();
-						noeudV = tempNoeud ;
-						y = noeudV->suiv ;
-					}
-				}
-			}
+                        // Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV
+                        // Case where they are in the same route
+                        if (movePerformed != 1 && gainWhenRemoving)
+                            movePerformed = intraRouteGeneralInsertDroite();
+                        noeudV = tempNoeud;
+                        y = noeudV->suiv;
+                    }
+                }
+            }
 
-			noeudV = noeudU->suiv ;
-			routeV = noeudV->route ;
-			vehicleV = routeV->vehicle ;
-			y = noeudV->suiv ;
-			if (!noeudV->route->nodeAndRouteTested[noeudU->cour])
-			{
-				while (moveEffectue != 1 && !noeudV->estUnDepot)
-				{ 
-					// Testing 2-Opt between U and V (if the restriction of the granular search allows) 
-					if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] || params->isCorrelated[noeudU->cour][noeudV->suiv->cour]) 
-						moveEffectue = intraRoute2Opt ();
-					noeudV = noeudV->suiv ;
-					y = noeudV->suiv ;
-				}
-			}
+            noeudV = noeudU->suiv ;
+            routeV = noeudV->route ;
+            vehicleV = routeV->vehicle ;
+            y = noeudV->suiv ;
+            if (!noeudV->route->nodeAndRouteTested[noeudU->cour]) {
+                while (movePerformed != 1 && !noeudV->estUnDepot) {
+                    // Testing 2-Opt between U and V (if the restriction of the granular search allows)
+                    if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] ||
+                        params->isCorrelated[noeudU->cour][noeudV->suiv->cour])
+                        movePerformed = intraRoute2Opt();
+                    noeudV = noeudV->suiv;
+                    y = noeudV->suiv;
+                }
+            }
 
-			// Special cases : testing the insertions behind the depot, and the empty routes
-			for (int route = 0 ; route < params->nbVehiculesPerDep && moveEffectue == 0 ; route ++)
-			{
-				noeudV = &depots[day][route] ;
-				routeV = noeudV->route ;
-				y = noeudV->suiv ;
-				if ( (!noeudV->route->nodeAndRouteTested[noeudU->cour]) && (!y->estUnDepot || !routeVideTestee))
-				{
-					if (y->estUnDepot) routeVideTestee = true ;
-					if (routeV != routeU)
-					{
-						tempNoeud = noeudV ;
-						noeudV = depots[day][route].suiv ;
-						y = noeudV->suiv ;
+            // Special cases : testing the insertions behind the depot, and the empty routes
+            for (int route = 0; route < params->nbVehiculesPerDep && movePerformed == 0; route++) {
+                noeudV = &depots[day][route];
+                routeV = noeudV->route;
+                y = noeudV->suiv;
+                if ((!noeudV->route->nodeAndRouteTested[noeudU->cour]) && (!y->estUnDepot || !routeVideTestee)) {
+                    if (y->estUnDepot) routeVideTestee = true;
+                    if (routeV != routeU) {
+                        tempNoeud = noeudV;
+                        noeudV = depots[day][route].suiv;
+                        y = noeudV->suiv;
 
-						// Insertion after the depot, in a different route
-						if (gainWhenRemoving && (params->isCorrelated[noeudU->cour][noeudV->cour] || params->isCorrelated[noeudU->cour][y->cour]) && moveEffectue != 1 ) 
-							moveEffectue = interRouteGeneralInsert();
+                        // Insertion after the depot, in a different route
+                        if (gainWhenRemoving && (params->isCorrelated[noeudU->cour][noeudV->cour] ||
+                                                 params->isCorrelated[noeudU->cour][y->cour]) && movePerformed != 1)
+                            movePerformed = interRouteGeneralInsert();
 
-						noeudV = noeudV->route->depot ;
-						y = noeudV->suiv ;
+                        noeudV = noeudV->route->depot;
+                        y = noeudV->suiv;
 
-						// 2-Opt* after the depot
-						if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] && moveEffectue != 1) 
-							moveEffectue = interRoute2Opt ();
+                        // 2-Opt* after the depot
+                        if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] && movePerformed != 1)
+                            movePerformed = interRoute2Opt();
 
-						// 2-Opt* after the depot
-						if ((params->isCorrelated[x->cour][y->cour] || params->isCorrelated[y->cour][x->cour]) && moveEffectue != 1) 
-							moveEffectue = interRoute2OptInv ();
+                        // 2-Opt* after the depot
+                        if ((params->isCorrelated[x->cour][y->cour] || params->isCorrelated[y->cour][x->cour]) &&
+                            movePerformed != 1)
+                            movePerformed = interRoute2OptInv();
 
-						noeudV = tempNoeud ;
-						y = noeudV->suiv ;
-					}
-					else
-					{
-						tempNoeud = noeudV ;
-						noeudV = depots[day][route].suiv ;
-						y = noeudV->suiv ;
+                        noeudV = tempNoeud;
+                        y = noeudV->suiv;
+                    } else {
+                        tempNoeud = noeudV;
+                        noeudV = depots[day][route].suiv;
+                        y = noeudV->suiv;
 
-						// Insertion after the depot, in the same route
-						if ((params->isCorrelated[noeudU->cour][noeudV->cour] || params->isCorrelated[noeudU->cour][y->cour]) && moveEffectue != 1) 
-							moveEffectue = intraRouteGeneralInsertDroite();
+                        // Insertion after the depot, in the same route
+                        if ((params->isCorrelated[noeudU->cour][noeudV->cour] ||
+                             params->isCorrelated[noeudU->cour][y->cour]) && movePerformed != 1)
+                            movePerformed = intraRouteGeneralInsertDroite();
 
-						noeudV = tempNoeud ;
-						y = noeudV->suiv ;
-					}
-				}
-			}
+                        noeudV = tempNoeud;
+                        y = noeudV->suiv;
+                    }
+                }
+            }
 
-			// Say that we have tested the node U with all routes
-			if (moveEffectue == 0)
-				nodeTestedForEachRoute(noeudU->cour,day);
-		}
-	}
-	// Calling the ejection chains at the end of the LS
-	nbMoves += ejectionChains(day);
-	return nbMoves ;
+            // Say that we have tested the node U with all routes
+            if (movePerformed == 0)
+                nodeTestedForEachRoute(noeudU->cour, day);
+        }
+    }
+    // Calling the ejection chains at the end of the LS
+    nbMoves += ejectionChains(day);
+    return nbMoves ;
 }
 
 int LocalSearch::mutationDifferentDay ()

@@ -110,7 +110,7 @@ class Population
    Individual * getIndividuBestInvalide ();
 
     // when the penalty coefficient change, need to recompute properly the fitness of the individuals in the population
-    void validatePen(SubPop *souspop);
+    void validatePen(SubPop *subPop);
 
    //////////////////////////////////////////////////////////
 
