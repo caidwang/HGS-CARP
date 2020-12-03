@@ -328,7 +328,7 @@ void Params::calculeStructures ()
 	for (int i=0 ; i < nbClients + nbDepots ; i++)
 	{
 		cli[i].sommetsVoisins.clear();
-		cli[i].sommetsVoisinsAvant.clear();
+		cli[i].neighborsCloseBefore.clear();
 	}
 
 	for (int i=0 ; i < nbClients + nbDepots ; i++)
@@ -347,7 +347,7 @@ void Params::calculeStructures ()
 		// And keeping only the closest ones
 		for (int j=0 ; j < min(nbClients,granularity) ; j++)
 		{
-			cli[i].sommetsVoisinsAvant.push_back(myVector[j].myInt);
+			cli[i].neighborsCloseBefore.push_back(myVector[j].myInt);
 			cli[myVector[j].myInt].sommetsVoisins.push_back(i);
 			isCorrelated[myVector[j].myInt][i] = true ;
 		}
@@ -644,12 +644,12 @@ void Params::shuffleClose() {
 
 	for (int i=nbDepots ; i < nbClients + nbDepots ; i++)
 	{
-		for (int a1 = 0 ; a1 < (int)cli[i].sommetsVoisinsAvant.size()-1 ; a1++ )
+		for (int a1 = 0 ; a1 < (int)cli[i].neighborsCloseBefore.size() - 1 ; a1++ )
 		{
-			temp2 = a1 + rand() % ((int)cli[i].sommetsVoisinsAvant.size() - a1) ;
-			temp =  cli[i].sommetsVoisinsAvant[a1] ;
-			cli[i].sommetsVoisinsAvant[a1] = cli[i].sommetsVoisinsAvant[temp2];
-			cli[i].sommetsVoisinsAvant[temp2] = temp ;
+			temp2 = a1 + rand() % ((int)cli[i].neighborsCloseBefore.size() - a1) ;
+			temp =  cli[i].neighborsCloseBefore[a1] ;
+			cli[i].neighborsCloseBefore[a1] = cli[i].neighborsCloseBefore[temp2];
+			cli[i].neighborsCloseBefore[temp2] = temp ;
 		}
 	}
 }

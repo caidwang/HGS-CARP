@@ -153,7 +153,7 @@ class Client
 	vector <int> sommetsVoisins ;
 
 	// For a customer j, list of customers i to which j is considered as "close"
-	vector <int> sommetsVoisinsAvant ;
+	vector <int> neighborsCloseBefore ;
 
 	Client();
 

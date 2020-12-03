@@ -72,7 +72,7 @@ private:
 	SeqData * seqdeb ;
 
 	// Is the search finished
-	bool rechercheTerminee ;
+	bool researchCompleted ;
 
 	// Access to the associated individual
 	Individual * individu ;

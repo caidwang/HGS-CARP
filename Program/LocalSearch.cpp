@@ -58,7 +58,7 @@ void LocalSearch::runSearchTotal ()
 int LocalSearch::mutationSameDay (int day) {
     // Local Search for one given day
     // Based on the classic moves (Relocate, Swap, CROSS, 2-Opt and 2-Opt*)
-    rechercheTerminee = false;
+    researchCompleted = false;
     double costBeforeRemoval, costAfterRemoval;
     bool gainWhenRemoving;
     int movePerformed = 0;
@@ -68,8 +68,8 @@ int LocalSearch::mutationSameDay (int day) {
     int size2;
 
     // We search and apply moves until a local minimum is attained
-    while (!rechercheTerminee) {
-        rechercheTerminee = true;
+    while (!researchCompleted) {
+        researchCompleted = true;
         movePerformed = 0;
 
         // For every node U in random order
@@ -214,7 +214,7 @@ int LocalSearch::mutationDifferentDay ()
 	// Local Search to improve the pattern choices for customers (PCARP and MDCARP)
 	// Only a single move, which is a relocate of all occurences of a customer in the best combination of days
 	// This move is still used for problems with a single period, in this case it only does a relocate without granular search restriction
-	rechercheTerminee = false ;
+	researchCompleted = false ;
 	int nbMoves = 0 ;
 	firstLoop = true ;
 
@@ -222,9 +222,9 @@ int LocalSearch::mutationDifferentDay ()
 		for (int r=0 ; r < params->nombreVehicules[day] ; r++)
 			routes[day][r].initiateInsertions() ;
 
-	while ( !rechercheTerminee )
+	while ( !researchCompleted )
 	{
-		rechercheTerminee = true ;
+        researchCompleted = true ;
 		// Searching for a better insertion place for all customers
         for (int posU = 0; posU < params->nbClients; posU++)
             nbMoves += searchBetterPattern(routeOrder[0][posU]);
@@ -453,7 +453,7 @@ int LocalSearch::interRouteGeneralInsert()
 	placeV->route->updateRouteData(false);
 	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
 
-	rechercheTerminee = false ; // Not finished the search
+	researchCompleted = false ; // Not finished the search
 	nbInterSwap ++ ;
 	return 1 ; // Return Success
 }
@@ -534,7 +534,7 @@ int LocalSearch::interRoute2Opt ()
 	routeV->updateRouteData(false);
 	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
 
-	rechercheTerminee = false ; // Not finished the search
+	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
 	noeudU = tempU ;
 	x = noeudU->suiv ;
@@ -654,7 +654,7 @@ int LocalSearch::interRoute2OptInv()
 	routeV->updateRouteData(false);
 	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
 
-	rechercheTerminee = false ; // Not finished the search
+	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
 	return 1 ; // Return Success
 }
@@ -1168,7 +1168,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 
 	routeU->updateRouteData(false); // Update the pre-processed data on the subsequences of the route
 	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
-	rechercheTerminee = false ; // Not finished the search
+	researchCompleted = false ; // Not finished the search
 	nbIntraSwap ++ ;
 	noeudU = tempU ;
 	noeudV = tempV ;
@@ -1223,7 +1223,7 @@ int LocalSearch::intraRoute2Opt ()
 	y->pred = noeudU ;
 	routeU->updateRouteData(false);  // Update the pre-processed data on the subsequences of the route
 	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
-	rechercheTerminee = false ; // Not finished the search
+	researchCompleted = false ; // Not finished the search
 	nbIntra2Opt ++ ;
 	return 1 ; // Return Success
 }
@@ -1310,7 +1310,7 @@ int LocalSearch::searchBetterPattern (int client)
 		}
 		//cout << "Inserting Node " << client << " With pattern " << meilleurPattern.pat << " Flag is : " << deplacementIntraJour << endl ;
 
-		rechercheTerminee = false ;
+		researchCompleted = false ;
 		return 1 ;
 	}
 	else return 0 ;
@@ -1449,9 +1449,9 @@ void LocalSearch::updateMoves ()
         for (int i = 0; i < (int) routeOrder[k].size(); i++) {
             client = routeOrder[k][i];
             clients[k][client].moves.clear();
-            size = (int) params->cli[client].sommetsVoisinsAvant.size();
+            size = (int) params->cli[client].neighborsCloseBefore.size();
             for (int a1 = 0; a1 < size; a1++) {
-                client2 = params->cli[client].sommetsVoisinsAvant[a1];
+                client2 = params->cli[client].neighborsCloseBefore[a1];
                 if (client2 >= params->nbDepots && clients[k][client2].estPresent)
                     clients[k][client].moves.push_back(client2);
             }

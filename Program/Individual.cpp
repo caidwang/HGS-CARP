@@ -243,6 +243,7 @@ int Individual::splitSimple(int k)
 		while (j < (int)chromT[k].size() && seq[j]->load <= params->ordreVehicules[k][0].vehicleCapacity*params->borne )
 		{
 			// Extend this route to the next visit
+			// 这里不会随着i增加被累加， 每次下一个等于前一个seq加上vour，第i个seq永远是0->0，因此可以被重置
 			seq[j+1]->concatOneAfter(seq[j],chromT[k][j],this,k);
 			cost = seq[0]->evaluation(seq[j+1],myseq,&params->ordreVehicules[k][0],mydist,mytminex,myloadex); // and evaluate
 

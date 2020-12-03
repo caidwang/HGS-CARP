@@ -174,6 +174,8 @@ double SeqData::evaluation(SeqData * seq1, Vehicle * vehicle)
 		+ max(seq1->bestCost00 - vehicle->maxRouteTime,0.0)*params->penalityLength ;
 }
 
+// 这种评估方式错也没错 但是只适合seq1的开始节点为depot，seq2的结束节点为depot的情况， 因为只考虑了两个seq连接的中间的4种情况，没有考虑seq以1开始以及seq2以1结束的情况
+// evaluation只用于评估完整的路径的penalized cost
 double SeqData::evaluation(SeqData * seq1, SeqData * seq2, Vehicle * vehicle) 
 {
 	Client * cli1 = &params->cli[seq1->lastNode] ;
