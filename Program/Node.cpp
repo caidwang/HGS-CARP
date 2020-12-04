@@ -16,11 +16,11 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //  ---------------------------------------------------------------------- */
 
-#include "Noeud.h"
+#include "Node.h"
 
-Noeud::Noeud(void) {}
+Node::Node(void) {}
 
-Noeud::Noeud(bool estUnDepot, int cour,int jour, bool estPresent, Noeud * suiv , Noeud * pred, Route * route,Params * params) 
+Node::Node(bool estUnDepot, int cour, int jour, bool estPresent, Node * suiv , Node * pred, Route * route, Params * params)
 : estUnDepot(estUnDepot),cour(cour),jour(jour), estPresent(estPresent),suiv(suiv), pred(pred), route(route),params(params)
 {
 	int ccour = cour ;
@@ -35,7 +35,7 @@ Noeud::Noeud(bool estUnDepot, int cour,int jour, bool estPresent, Noeud * suiv ,
 	place = -1 ;
 }
 
-Noeud::Noeud(Noeud const& copy)
+Node::Node(Node const& copy)
 {
 	// Copy constructor
 	estUnDepot = copy.estUnDepot ;
@@ -52,7 +52,7 @@ Noeud::Noeud(Noeud const& copy)
 	moves = copy.moves ;
 }
 
-Noeud& Noeud::operator=(Noeud const& copy)
+Node& Node::operator=(Node const& copy)
 {
 	// Copy constructor
 	estUnDepot = copy.estUnDepot ;
@@ -70,9 +70,9 @@ Noeud& Noeud::operator=(Noeud const& copy)
 	return *this;
 }
 
-Noeud::~Noeud(void){}
+Node::~Node(void){}
 
-void Noeud::setRemaining()
+void Node::setRemaining()
 {
 	// seq1 has exactly the same meaning than seqi_j[0], but its more convenient to use and read
 	seq1 = seqi_j[0] ;

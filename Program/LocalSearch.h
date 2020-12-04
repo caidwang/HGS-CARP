@@ -22,7 +22,7 @@
 // EPSILON GAP in the local search, to avoid numerical issues when accepting improvement
 #define EPSILON_LS 0.001
 
-#include "Noeud.h"
+#include "Node.h"
 #include "SeqData.h"
 #include <stdlib.h>
 #include <stdio.h> 
@@ -35,10 +35,10 @@ using namespace std ;
 struct EC_element {
 	
 	// Node that is represented
-	Noeud * myNode ;
+	Node * myNode ;
 
 	// Position for insertion (case where the node is a depot)
-	Noeud * bestInsertionPlace ;
+	Node * bestInsertionPlace ;
 
 	// Cost of the labels arriving here
 	double cost ;
@@ -78,23 +78,23 @@ private:
 	Individual * individu ;
 
 	// Small pointers and variables which are used during the LS
-	Noeud * noeudU ;
-	Noeud * noeudUPred ;
-	Noeud * x ;
-	Noeud * noeudXSuiv ;
-    Noeud * noeudV ;
-	Noeud * noeudVPred ;
-	Noeud * y ;
-	Noeud * noeudYSuiv ;
+	Node * nodeU ;
+	Node * nodeUPred ;
+	Node * x ;
+	Node * nodeXSuiv ;
+    Node * nodeV ;
+	Node * nodeVPred ;
+	Node * y ;
+	Node * nodeYSuiv ;
 	Route * routeU ;
 	Route * routeV ;
 	Vehicle * vehicleU ;
 	Vehicle * vehicleV ;
 	int noeudUCour, noeudUPredCour, xCour, xSuivCour, ySuivCour, noeudVCour, noeudVPredCour, yCour ;
 	bool testingIncumbentPattern ; // little variable used during the local search (PI) to see if we are testing the pattern for which the customer is currently inserted
-	bool deplacementIntraJour ; // flag raised if its possible to improve the location of a customer in its own day (PVRP and PCARP), used in PI
+	bool intraDayDisplacement ; // flag raised if its possible to improve the location of a customer in its own day (PVRP and PCARP), used in PI
 	bool firstLoop ; // are we in the first loop (for PI mutations)
-	vector <SeqData *> myseqs ; // temporary vector to keep some pointers towards preprocessed data
+	vector <SeqData *> mySeqs ; // temporary vector to keep some pointers towards preprocessed data
 
 	// shuffling procedure (for RI)
     void shuffleRouteOrder();
@@ -121,8 +121,8 @@ private:
 
 	// change the pattern of "client" if its possible to find a better pattern (PI)
 	int searchBetterPattern (int client);
-	void computeCoutInsertion(Noeud * client, int pattern) ; // subprocedures for PI
-    void evalInsertClient(Route *R, Noeud *U, int pattern); // subprocedures for PI
+	void computeCostInsertion(Node * client, int pattern) ; // subprocedures for PI
+    void evalInsertClient(Route *R, Node *U, int pattern); // subprocedures for PI
 
 public:
 
@@ -153,9 +153,9 @@ public:
 
 	// Linked list of the customer (used to store the solution)
 	// there is a pointer for the successor and the predecessor, as well as for the route and pre-processed data structures
-	Noeud ** clients ; // Elements representing the customers
-	Noeud ** depots ; // Elements representing the depots
-	Noeud ** depotsFin ; // Sentinels at the end of the routes
+	Node ** clients ; // Elements representing the customers
+	Node ** depots ; // Elements representing the depots
+	Node ** depotsFin ; // Sentinels at the end of the routes
 	Route ** routes ; // Elements representing the routes
 
 	// running the complete local search (RI-PI-RI)
@@ -181,15 +181,15 @@ public:
 
 	/* ROUTINES USED TO MODIFY THE SOLUTION, WHEN APPLYING A MOVE */
 
-	void insertNoeud(Noeud * U, Noeud * V) ; // Inserts client U after V
-	void removeNoeud(Noeud * U) ; // Removes client U
-	void addNoeud(Noeud * U, Noeud * V) ; // Adds client U after V
+	void insertNoeud(Node * U, Node * V) ; // Inserts client U after V
+	void removeNoeud(Node * U) ; // Removes client U
+	void addNoeud(Node * U, Node * V) ; // Adds client U after V
 
 	// To call intra-route moves on smaller sequences
 	// if a limit on the size of the subsequence is set, it will cut the seqdata in smaller pieces
 	// By default, there we use an upper bound,  such that all subsequences have been preprocessed (cf Params.h)
-	inline void addSeqDataInPieces (Noeud * node, int length, int day);
-	inline void addReverseSeqDataInPieces (Noeud * node, int length, int day); // the same with the reverse sequence. For 2-opt moves.
+	inline void addSeqDataInPieces (Node * node, int length, int day);
+	inline void addReverseSeqDataInPieces (Node * node, int length, int day); // the same with the reverse sequence. For 2-opt moves.
 
 	/* PROCEDURE OF INSERTION OF THE MISSING NODES IN THE PIX CROSSOVER */
 	void placeManquants ();

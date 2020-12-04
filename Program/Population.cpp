@@ -404,7 +404,7 @@ void Population::ExportBest (string filename)
 	allRoutes.push_back(vector < vector <int> > ());
 	allRoutesArcs.push_back(vector < vector <pair<int,int> > > ()) ;
 	int compteur ;
-	Noeud * noeudActuel ;
+	Node * noeudActuel ;
 	LocalSearch * loc ;
 	ofstream myfile;
 	double temp, temp2 ;
@@ -476,19 +476,19 @@ void Population::ExportBest (string filename)
 			for (int i=0 ; i < params->nombreVehicules[k] ; i++)
 			{	
 				// Test if the route is empty
-				if (!loc->routes[k][i].depot->suiv->estUnDepot)
+				if (!loc->routes[k][i].depot->nextNode->isDepot)
 				{
 					// The route is not empty
 					// First, we pre-process again the data structures on the route with the flag "true", which allow to track back the orientation of the visits
 					loc->routes[k][i].updateRouteData(true); 
-					noeudActuel = loc->routes[k][i].depot->suiv ;
+					noeudActuel = loc->routes[k][i].depot->nextNode ;
 					rout.clear();
 					rout.push_back(loc->routes[k][i].depot->cour);
 					rout.push_back(noeudActuel->cour);
 
-					while (!noeudActuel->estUnDepot)
+					while (!noeudActuel->isDepot)
 					{
-						noeudActuel = noeudActuel->suiv ;
+						noeudActuel = noeudActuel->nextNode ;
 						rout.push_back(noeudActuel->cour);
 					}
 

@@ -23,7 +23,7 @@
 #include <fstream>
 #include <vector>
 #include <time.h>
-#include "Noeud.h"
+#include "Node.h"
 #include "Individual.h"
 
 using namespace std ;

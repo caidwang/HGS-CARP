@@ -16,15 +16,15 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //  ---------------------------------------------------------------------- */
 
-#ifndef NOEUD_H
-#define NOEUD_H
+#ifndef NODE_H
+#define NODE_H
 
 #include <iostream>
 using namespace std;
 class Route ;
 #include "Route.h"
 
-class Noeud
+class Node
 {
 
 public :
@@ -33,7 +33,7 @@ public :
 Params * params ;
 
 // is-it a depot
-bool estUnDepot ;
+bool isDepot ;
 
 // index of the depot or customer
 int cour ;
@@ -42,17 +42,17 @@ int cour ;
 int place ;
 
 // index of the day in which this customer is inserted
-int jour ;
+int day ;
 
 // is this customer used on this day 
 // (all customer nodes are created for each day, but not necessarily inserted in the sequence)
-bool estPresent ;
+bool isPresent ;
 
 // next depot or client in the route
-Noeud * suiv ;
+Node * nextNode ;
 
 // previous depot or client in the route
-Noeud * pred ;
+Node * pred ;
 
 // associated route
 Route * route ;
@@ -80,25 +80,25 @@ vector < double > coutInsertion ;
 // place where it would be inserted
 // This had to be generalized to the PCARP, as the demand may change as a function of the pattern choice, the
 // placeInsertion can be evaluated for all possible pattern which contain this day.
-vector < Noeud * > placeInsertion ;
+vector < Node * > placeInsertion ;
 
 // possible moves for this customer and this day (granular search)
 vector < int > moves ;
 
 // constructor 1
-Noeud(void);
+Node(void);
 	
 // constructor 2
-Noeud(bool estUnDepot, int cour, int jour, bool estPresent, Noeud * suiv , Noeud * pred, Route * route,Params * params);
+Node(bool estUnDepot, int cour, int jour, bool estPresent, Node * suiv , Node * pred, Route * route, Params * params);
 
 // destructor
-~Noeud(void);
+~Node(void);
 
 // Copy constructor
-Noeud(Noeud const& copy) ;
+Node(Node const& copy) ;
 
 // Assignment operator in terms of the copy constructor
-Noeud& operator=(Noeud const& copy);
+Node& operator=(Node const& copy);
 
 // little function to correctly initialize the pointers
 void setRemaining();

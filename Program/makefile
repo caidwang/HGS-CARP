@@ -15,7 +15,7 @@ OBJS2 = \
         $(TARGETDIR)/Individu.o \
         $(TARGETDIR)/LocalSearch.o \
         $(TARGETDIR)/main.o \
-        $(TARGETDIR)/Noeud.o \
+        $(TARGETDIR)/Node.o \
         $(TARGETDIR)/SeqData.o \
         $(TARGETDIR)/Params.o \
         $(TARGETDIR)/Population.o \
@@ -46,8 +46,8 @@ $(TARGETDIR)/LocalSearch.o: LocalSearch.h LocalSearch.cpp
 $(TARGETDIR)/main.o: main.cpp
 	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c main.cpp -o $(TARGETDIR)/main.o
 	
-$(TARGETDIR)/Noeud.o: Noeud.h Noeud.cpp
-	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c Noeud.cpp -o $(TARGETDIR)/Noeud.o
+$(TARGETDIR)/Node.o: Node.h Node.cpp
+	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c Node.cpp -o $(TARGETDIR)/Node.o
 
 $(TARGETDIR)/SeqData.o: SeqData.h
 	$(CCC) $(CCFLAGS) $(CPPFLAGS) -c SeqData.cpp -o $(TARGETDIR)/SeqData.o
@@ -71,7 +71,7 @@ clean:
 	 $(TARGETDIR)/Genetic.o \
      $(TARGETDIR)/Individu.o \
      $(TARGETDIR)/LocalSearch.o \
-     $(TARGETDIR)/Noeud.o \
+     $(TARGETDIR)/Node.o \
      $(TARGETDIR)/SeqData.o \
      $(TARGETDIR)/Params.o \
      $(TARGETDIR)/Population.o \

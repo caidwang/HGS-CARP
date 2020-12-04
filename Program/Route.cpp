@@ -20,12 +20,12 @@
 
 Route::Route(void){}
 
-Route::Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day) : cour(cour), depot(depot), vehicle(vehicle), params(params), individu(indiv), day(day)
+Route::Route(int cour, Node * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day) : cour(cour), depot(depot), vehicle(vehicle), params(params), individu(indiv), day(day)
 {
 	for (int i=0 ; i < params->nbClients + params->nbDepots ; i++ )
 	{
 		coutInsertionClient.push_back(vector <double> ()) ;
-		placeInsertionClient.push_back(vector <Noeud *> ());
+		placeInsertionClient.push_back(vector <Node *> ());
 		for (int p=0 ; p < params->cli[i].visits.size() ; p++)
 		{
 			coutInsertionClient[i].push_back(1.e30);
@@ -40,26 +40,26 @@ Route::~Route(void){}
 void Route::reverse ()
 {
 	// Reversing the order of the nodes in the sequence
-	if (!depot->suiv->estUnDepot)
+	if (!depot->nextNode->isDepot)
 	{
-		Noeud * temp ;
-		Noeud * myDepot = depot ;
-		Noeud * myDepotFin = depot->pred ;
-		Noeud * cour = depot->suiv ;
+		Node * temp ;
+		Node * myDepot = depot ;
+		Node * myDepotFin = depot->pred ;
+		Node * cour = depot->nextNode ;
 
-		while ( !cour->estUnDepot )
+		while ( !cour->isDepot )
 		{
-			temp = cour->suiv ;
-			cour->suiv = cour->pred ;
+			temp = cour->nextNode ;
+			cour->nextNode = cour->pred ;
 			cour->pred = temp ;
 			cour = temp ;
 		}
 
-		temp = myDepot->suiv ;
-		myDepot->suiv = myDepotFin->pred ;
+		temp = myDepot->nextNode ;
+		myDepot->nextNode = myDepotFin->pred ;
 		myDepotFin->pred = temp ;
-		myDepot->suiv->pred = myDepot ;
-		myDepotFin->pred->suiv = myDepotFin ;
+		myDepot->nextNode->pred = myDepot ;
+		myDepotFin->pred->nextNode = myDepotFin ;
 	}
 }
 
@@ -73,7 +73,7 @@ void Route::updateRouteData (bool isForPrinting)
     double nbNodes = 1 ;
 
     // Computing the auxiliary data on any subsequence (0..i), using forward recursion
-    Noeud * noeud = depot ;
+    Node * noeud = depot ;
     noeud->place = place ;
     noeud->seq0_i->initialisation(noeud->cour,params,individu,day,isForPrinting);
     noeud->seqi_0->initialisation(noeud->cour,params,individu,day,false);
@@ -81,9 +81,9 @@ void Route::updateRouteData (bool isForPrinting)
     Yvalue += params->cli[noeud->cour].coord.y ;
 
     firstIt = true ;
-    while (!noeud->estUnDepot || firstIt) {
+    while (!noeud->isDepot || firstIt) {
         firstIt = false ;
-        noeud = noeud->suiv ;
+        noeud = noeud->nextNode ;
         Xvalue += params->cli[noeud->cour].coord.x ;
         Yvalue += params->cli[noeud->cour].coord.y ;
         nbNodes ++ ;
@@ -102,27 +102,27 @@ void Route::updateRouteData (bool isForPrinting)
     noeud->seqn_i->initialisation(noeud->cour,params,individu,day,false);
 
     firstIt = true ;
-    while ( !noeud->estUnDepot || firstIt ) {
+    while (!noeud->isDepot || firstIt ) {
         firstIt = false ;
         noeud = noeud->pred ;
-        noeud->seqi_n->concatOneBefore(noeud->suiv->seqi_n,noeud->cour,individu,day);
-        noeud->seqn_i->concatOneAfter(noeud->suiv->seqn_i,noeud->cour,individu,day);
+        noeud->seqi_n->concatOneBefore(noeud->nextNode->seqi_n, noeud->cour, individu, day);
+        noeud->seqn_i->concatOneAfter(noeud->nextNode->seqn_i, noeud->cour, individu, day);
     }
 
     // Computing the auxiliary data on any subsequence (i..j), using forward recursion
     // To gain a bit of time, we limit this preprocessing to subsequences such that i..j does not contain more than "sizeSD" elements
     // (More intelligent strategies could be used (e.g., the hierarchical approach of Irnich))
-    Noeud * noeudi ;
-    Noeud * noeudj ;
+    Node * noeudi ;
+    Node * noeudj ;
     noeudi = depot ;
     for (int i=0 ; i <= depot->pred->place ; i++) {
         noeudi->seqi_j[0]->initialisation(noeudi->cour,params,individu,day,false);
-        noeudj = noeudi->suiv ;
+        noeudj = noeudi->nextNode ;
         for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++) {
             noeudi->seqi_j[j]->concatOneAfter(noeudi->seqi_j[j-1],noeudj->cour,individu,day);
-            noeudj = noeudj->suiv ;
+            noeudj = noeudj->nextNode ;
         }
-        noeudi = noeudi->suiv ;
+        noeudi = noeudi->nextNode ;
     }
 
     noeudi = depot->pred ;
@@ -130,7 +130,7 @@ void Route::updateRouteData (bool isForPrinting)
         noeudi->seqj_i[0]->initialisation(noeudi->cour,params,individu,day,false);
         noeudj = noeudi->pred ;
         for (int j=1 ; j <= depot->pred->place - i && j < params->sizeSD ; j++) {
-            noeudj->seqj_i[j]->concatOneAfter(noeudj->suiv->seqj_i[j-1],noeudj->cour,individu,day);
+            noeudj->seqj_i[j]->concatOneAfter(noeudj->nextNode->seqj_i[j - 1], noeudj->cour, individu, day);
             noeudj = noeudj->pred ;
         }
         noeudi = noeudi->pred ;

@@ -63,8 +63,8 @@ int LocalSearch::mutationSameDay (int day) {
     bool gainWhenRemoving;
     int movePerformed = 0;
     int nbMoves = 0;
-    bool routeVideTestee;
-    Noeud *tempNoeud;
+    bool emptyRouteTested;
+    Node *tempNode;
     int size2;
 
     // We search and apply moves until a local minimum is attained
@@ -77,42 +77,42 @@ int LocalSearch::mutationSameDay (int day) {
             posU -= movePerformed; // We return on the last node if there has been a move
             nbMoves += movePerformed;
             movePerformed = 0;
-            routeVideTestee = false;
+            emptyRouteTested = false;
 
-            noeudU = &clients[day][routeOrder[day][posU]];
-            routeU = noeudU->route;
+            nodeU = &clients[day][routeOrder[day][posU]];
+            routeU = nodeU->route;
             vehicleU = routeU->vehicle;
-            x = noeudU->suiv;
+            x = nodeU->nextNode;
 
             // In the CARP, some service removal do not reduce the cost of the route
             // In this case, very few moves can improve the solution (only 2-opt variants), and thus SWAP and RELOCATE variants do not need to be tested
             // 去除不必要的LS步骤以缩小LS的搜索空间
-            costBeforeRemoval = noeudU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle);
-            costAfterRemoval = noeudU->seq0_i->evaluation(noeudU->pred->seq0_i, noeudU->suiv->seqi_n, routeU->vehicle);
+            costBeforeRemoval = nodeU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle);
+            costAfterRemoval = nodeU->seq0_i->evaluation(nodeU->pred->seq0_i, nodeU->nextNode->seqi_n, routeU->vehicle);
             gainWhenRemoving = (costAfterRemoval < costBeforeRemoval - 0.1);
 
             // For every node V in random order
-            size2 = (int) noeudU->moves.size();
+            size2 = (int) nodeU->moves.size();
             // U,V两个node的操作 O(N^2)
             for (int posV = 0; posV < size2 && movePerformed == 0; posV++) {
-                noeudV = &clients[day][noeudU->moves[posV]];
-                routeV = noeudV->route;
+                nodeV = &clients[day][nodeU->moves[posV]];
+                routeV = nodeV->route;
                 vehicleV = routeV->vehicle;
 
                 // If we have not yet tested the moves involving the node U and the route of node V
                 // (This flag is reset to false as soon as there is a modification in the route)
-                if (!noeudV->route->nodeAndRouteTested[noeudU->cour]) {
-                    y = noeudV->suiv;
+                if (!nodeV->route->nodeAndRouteTested[nodeU->cour]) {
+                    y = nodeV->nextNode;
                     if (routeV->cour != routeU->cour) {
                         if (movePerformed != 1) {
-                            tempNoeud = noeudV;
-                            noeudV = noeudV->suiv;
-                            y = noeudV->suiv;
+                            tempNode = nodeV;
+                            nodeV = nodeV->nextNode;
+                            y = nodeV->nextNode;
                             // Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV
                             // Case where they are in different routes
                             if (gainWhenRemoving) movePerformed = interRouteGeneralInsert();
-                            noeudV = tempNoeud;
-                            y = noeudV->suiv;
+                            nodeV = tempNode;
+                            y = nodeV->nextNode;
                         }
 
                         // 2-Opt*
@@ -123,57 +123,57 @@ int LocalSearch::mutationSameDay (int day) {
                         if (movePerformed != 1)
                             movePerformed = interRoute2OptInv();
                     } else {
-                        tempNoeud = noeudV;
-                        noeudV = noeudV->suiv;
-                        y = noeudV->suiv;
+                        tempNode = nodeV;
+                        nodeV = nodeV->nextNode;
+                        y = nodeV->nextNode;
 
                         // Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV
                         // Case where they are in the same route
                         if (movePerformed != 1 && gainWhenRemoving)
                             movePerformed = intraRouteGeneralInsertDroite();
-                        noeudV = tempNoeud;
-                        y = noeudV->suiv;
+                        nodeV = tempNode;
+                        y = nodeV->nextNode;
                     }
                 }
             }
 
-            noeudV = noeudU->suiv ;
-            routeV = noeudV->route ;
+            nodeV = nodeU->nextNode ;
+            routeV = nodeV->route ;
             vehicleV = routeV->vehicle ;
-            y = noeudV->suiv ;
-            if (!noeudV->route->nodeAndRouteTested[noeudU->cour]) {
-                while (movePerformed != 1 && !noeudV->estUnDepot) {
+            y = nodeV->nextNode ;
+            if (!nodeV->route->nodeAndRouteTested[nodeU->cour]) {
+                while (movePerformed != 1 && !nodeV->isDepot) {
                     // Testing 2-Opt between U and V (if the restriction of the granular search allows)
-                    if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] ||
-                        params->isCorrelated[noeudU->cour][noeudV->suiv->cour])
+                    if (params->isCorrelated[nodeU->pred->cour][nodeV->cour] ||
+                        params->isCorrelated[nodeU->cour][nodeV->nextNode->cour])
                         movePerformed = intraRoute2Opt();
-                    noeudV = noeudV->suiv;
-                    y = noeudV->suiv;
+                    nodeV = nodeV->nextNode;
+                    y = nodeV->nextNode;
                 }
             }
 
             // Special cases : testing the insertions behind the depot, and the empty routes
             for (int route = 0; route < params->nbVehiculesPerDep && movePerformed == 0; route++) {
-                noeudV = &depots[day][route];
-                routeV = noeudV->route;
-                y = noeudV->suiv;
-                if ((!noeudV->route->nodeAndRouteTested[noeudU->cour]) && (!y->estUnDepot || !routeVideTestee)) {
-                    if (y->estUnDepot) routeVideTestee = true;
+                nodeV = &depots[day][route];
+                routeV = nodeV->route;
+                y = nodeV->nextNode;
+                if ((!nodeV->route->nodeAndRouteTested[nodeU->cour]) && (!y->isDepot || !emptyRouteTested)) {
+                    if (y->isDepot) emptyRouteTested = true;
                     if (routeV != routeU) {
-                        tempNoeud = noeudV;
-                        noeudV = depots[day][route].suiv;
-                        y = noeudV->suiv;
+                        tempNode = nodeV;
+                        nodeV = depots[day][route].nextNode;
+                        y = nodeV->nextNode;
 
                         // Insertion after the depot, in a different route
-                        if (gainWhenRemoving && (params->isCorrelated[noeudU->cour][noeudV->cour] ||
-                                                 params->isCorrelated[noeudU->cour][y->cour]) && movePerformed != 1)
+                        if (gainWhenRemoving && (params->isCorrelated[nodeU->cour][nodeV->cour] ||
+                                                 params->isCorrelated[nodeU->cour][y->cour]) && movePerformed != 1)
                             movePerformed = interRouteGeneralInsert();
 
-                        noeudV = noeudV->route->depot;
-                        y = noeudV->suiv;
+                        nodeV = nodeV->route->depot;
+                        y = nodeV->nextNode;
 
                         // 2-Opt* after the depot
-                        if (params->isCorrelated[noeudU->pred->cour][noeudV->cour] && movePerformed != 1)
+                        if (params->isCorrelated[nodeU->pred->cour][nodeV->cour] && movePerformed != 1)
                             movePerformed = interRoute2Opt();
 
                         // 2-Opt* after the depot
@@ -181,27 +181,27 @@ int LocalSearch::mutationSameDay (int day) {
                             movePerformed != 1)
                             movePerformed = interRoute2OptInv();
 
-                        noeudV = tempNoeud;
-                        y = noeudV->suiv;
+                        nodeV = tempNode;
+                        y = nodeV->nextNode;
                     } else {
-                        tempNoeud = noeudV;
-                        noeudV = depots[day][route].suiv;
-                        y = noeudV->suiv;
+                        tempNode = nodeV;
+                        nodeV = depots[day][route].nextNode;
+                        y = nodeV->nextNode;
 
                         // Insertion after the depot, in the same route
-                        if ((params->isCorrelated[noeudU->cour][noeudV->cour] ||
-                             params->isCorrelated[noeudU->cour][y->cour]) && movePerformed != 1)
+                        if ((params->isCorrelated[nodeU->cour][nodeV->cour] ||
+                             params->isCorrelated[nodeU->cour][y->cour]) && movePerformed != 1)
                             movePerformed = intraRouteGeneralInsertDroite();
 
-                        noeudV = tempNoeud;
-                        y = noeudV->suiv;
+                        nodeV = tempNode;
+                        y = nodeV->nextNode;
                     }
                 }
             }
 
             // Say that we have tested the node U with all routes
             if (movePerformed == 0)
-                nodeTestedForEachRoute(noeudU->cour, day);
+                nodeTestedForEachRoute(nodeU->cour, day);
         }
     }
     // Calling the ejection chains at the end of the LS
@@ -240,7 +240,7 @@ int LocalSearch::interRouteGeneralInsert()
 	int ibest, jbest ;
 	double moveMin ;
 	double temp ;
-	SeqData * seq = noeudU->seq0_i ;
+	SeqData * seq = nodeU->seq0_i ;
 	double costZero = routeU->currentRouteCost + routeV->currentRouteCost ;
 
 	// This table will keep the result of the moves
@@ -259,29 +259,29 @@ int LocalSearch::interRouteGeneralInsert()
 	// We start to compute lower bounds on move evaluations, so that we can discard any moves which are not promising.
 
 	// Can send something if U is not a depot
-	if (!noeudU->estUnDepot)
+	if (!nodeU->isDepot)
 	{
 		// We evaluate the result of the move as a combination of existing subsequences
-		resultMoves[1][0] = seq->evaluationLB(noeudU->pred->seq0_i,x->seqi_n,routeU->vehicle);
+		resultMoves[1][0] = seq->evaluationLB(nodeU->pred->seq0_i, x->seqi_n, routeU->vehicle);
 
 		// Can we receive something (if V is not a depot)
 		// In the following, all the conditionals are set up to avoid moving depots
-		if (!noeudV->estUnDepot)
-			resultMoves[1][1] = seq->evaluationLB(noeudU->pred->seq0_i,noeudV->seq1,x->seqi_n,routeU->vehicle);
+		if (!nodeV->isDepot)
+			resultMoves[1][1] = seq->evaluationLB(nodeU->pred->seq0_i, nodeV->seq1, x->seqi_n, routeU->vehicle);
 
 		// And so on...
-		if (!x->estUnDepot)
+		if (!x->isDepot)
 		{
-			resultMoves[2][0] = seq->evaluationLB(noeudU->pred->seq0_i,x->suiv->seqi_n,routeU->vehicle);
+			resultMoves[2][0] = seq->evaluationLB(nodeU->pred->seq0_i, x->nextNode->seqi_n, routeU->vehicle);
 			resultMoves[3][0] = resultMoves[2][0] ;
-			if (!noeudV->estUnDepot)
+			if (!nodeV->isDepot)
 			{
-				resultMoves[2][1] = seq->evaluationLB(noeudU->pred->seq0_i,noeudV->seq1,x->suiv->seqi_n,routeU->vehicle);
+				resultMoves[2][1] = seq->evaluationLB(nodeU->pred->seq0_i, nodeV->seq1, x->nextNode->seqi_n, routeU->vehicle);
 				resultMoves[3][1] = resultMoves[2][1] ;
-				if (!y->estUnDepot)
+				if (!y->isDepot)
 				{
-					resultMoves[2][2] = seq->evaluationLB(noeudU->pred->seq0_i,noeudV->seq12,x->suiv->seqi_n,routeU->vehicle);
-					resultMoves[2][3] = seq->evaluationLB(noeudU->pred->seq0_i,noeudV->seq21,x->suiv->seqi_n,routeU->vehicle);
+					resultMoves[2][2] = seq->evaluationLB(nodeU->pred->seq0_i, nodeV->seq12, x->nextNode->seqi_n, routeU->vehicle);
+					resultMoves[2][3] = seq->evaluationLB(nodeU->pred->seq0_i, nodeV->seq21, x->nextNode->seqi_n, routeU->vehicle);
 					resultMoves[3][2] = resultMoves[2][2];
 					resultMoves[3][3] = resultMoves[2][3];
 				}
@@ -289,33 +289,33 @@ int LocalSearch::interRouteGeneralInsert()
 		}
 	}
 
-	if (!noeudU->estUnDepot)
+	if (!nodeU->isDepot)
 	{
-		resultMoves[1][0] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq1,noeudV->seqi_n,routeV->vehicle);
-		if (!x->estUnDepot)
+		resultMoves[1][0] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq1, nodeV->seqi_n, routeV->vehicle);
+		if (!x->isDepot)
 		{
-			resultMoves[2][0] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq12,noeudV->seqi_n,routeV->vehicle);
-			resultMoves[3][0] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq21,noeudV->seqi_n,routeV->vehicle);
+			resultMoves[2][0] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq12, nodeV->seqi_n, routeV->vehicle);
+			resultMoves[3][0] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeV->vehicle);
 		}
 	}
 
-	if (!noeudV->estUnDepot)
+	if (!nodeV->isDepot)
 	{
-		if (!noeudU->estUnDepot)
+		if (!nodeU->isDepot)
 		{
-			resultMoves[1][1] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq1,y->seqi_n,routeV->vehicle);
-			if (!x->estUnDepot)
+			resultMoves[1][1] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq1, y->seqi_n, routeV->vehicle);
+			if (!x->isDepot)
 			{
-				resultMoves[2][1] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq12,y->seqi_n,routeV->vehicle);
-				resultMoves[3][1] += seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq21,y->seqi_n,routeV->vehicle);
+				resultMoves[2][1] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq12, y->seqi_n, routeV->vehicle);
+				resultMoves[3][1] += seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq21, y->seqi_n, routeV->vehicle);
 			}
 		}
-		if (!y->estUnDepot && !noeudU->estUnDepot && !x->estUnDepot)
+		if (!y->isDepot && !nodeU->isDepot && !x->isDepot)
 		{
-			temp = seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq12,y->suiv->seqi_n,routeV->vehicle);
+			temp = seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq12, y->nextNode->seqi_n, routeV->vehicle);
 			resultMoves[2][2] += temp ;
 			resultMoves[2][3] += temp ;
-			temp = seq->evaluationLB(noeudV->pred->seq0_i,noeudU->seq21,y->suiv->seqi_n,routeV->vehicle);
+			temp = seq->evaluationLB(nodeV->pred->seq0_i, nodeU->seq21, y->nextNode->seqi_n, routeV->vehicle);
 			resultMoves[3][2] += temp ;
 			resultMoves[3][3] += temp ;
 		}
@@ -336,37 +336,37 @@ int LocalSearch::interRouteGeneralInsert()
 	/* AND NOW WE TEST THE MOVES THAT HAVE A CHANCE TO BE IMPROVING */
 	// Exactly the same code as previously, but using "seq->evaluation" instead of "seq->evaluationLB"
 
-	if (!noeudU->estUnDepot)
+	if (!nodeU->isDepot)
 	{
-		if (shouldBeTested[1][0]) resultMoves[1][0] = seq->evaluation(noeudU->pred->seq0_i,x->seqi_n,routeU->vehicle);
+		if (shouldBeTested[1][0]) resultMoves[1][0] = seq->evaluation(nodeU->pred->seq0_i, x->seqi_n, routeU->vehicle);
 
-		if (!noeudV->estUnDepot && shouldBeTested[1][1])
-			resultMoves[1][1] = seq->evaluation(noeudU->pred->seq0_i,noeudV->seq1,x->seqi_n,routeU->vehicle);
+		if (!nodeV->isDepot && shouldBeTested[1][1])
+			resultMoves[1][1] = seq->evaluation(nodeU->pred->seq0_i, nodeV->seq1, x->seqi_n, routeU->vehicle);
 
-		if (!x->estUnDepot)
+		if (!x->isDepot)
 		{
 			if (shouldBeTested[2][0] || shouldBeTested[3][0]) 
 			{
-				resultMoves[2][0] = seq->evaluation(noeudU->pred->seq0_i,x->suiv->seqi_n,routeU->vehicle);
+				resultMoves[2][0] = seq->evaluation(nodeU->pred->seq0_i, x->nextNode->seqi_n, routeU->vehicle);
 				resultMoves[3][0] = resultMoves[2][0] ;
 			}
-			if (!noeudV->estUnDepot)
+			if (!nodeV->isDepot)
 			{
 				if (shouldBeTested[2][1] || shouldBeTested[3][1])
 				{
-					resultMoves[2][1] = seq->evaluation(noeudU->pred->seq0_i,noeudV->seq1,x->suiv->seqi_n,routeU->vehicle);
+					resultMoves[2][1] = seq->evaluation(nodeU->pred->seq0_i, nodeV->seq1, x->nextNode->seqi_n, routeU->vehicle);
 					resultMoves[3][1] = resultMoves[2][1] ;
 				}
-				if (!y->estUnDepot)
+				if (!y->isDepot)
 				{
 					if (shouldBeTested[2][2] || shouldBeTested[3][2])
 					{
-						resultMoves[2][2] = seq->evaluation(noeudU->pred->seq0_i,noeudV->seq12,x->suiv->seqi_n,routeU->vehicle);
+						resultMoves[2][2] = seq->evaluation(nodeU->pred->seq0_i, nodeV->seq12, x->nextNode->seqi_n, routeU->vehicle);
 						resultMoves[3][2] = resultMoves[2][2];
 					}
 					if (shouldBeTested[2][3] || shouldBeTested[3][3])
 					{
-						resultMoves[2][3] = seq->evaluation(noeudU->pred->seq0_i,noeudV->seq21,x->suiv->seqi_n,routeU->vehicle);
+						resultMoves[2][3] = seq->evaluation(nodeU->pred->seq0_i, nodeV->seq21, x->nextNode->seqi_n, routeU->vehicle);
 						resultMoves[3][3] = resultMoves[2][3];
 					}
 				}
@@ -374,38 +374,38 @@ int LocalSearch::interRouteGeneralInsert()
 		}
 	}
 
-	if (!noeudU->estUnDepot)
+	if (!nodeU->isDepot)
 	{
-		if (shouldBeTested[1][0]) resultMoves[1][0] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq1,noeudV->seqi_n,routeV->vehicle);
-		if (!x->estUnDepot)
+		if (shouldBeTested[1][0]) resultMoves[1][0] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq1, nodeV->seqi_n, routeV->vehicle);
+		if (!x->isDepot)
 		{
-			if (shouldBeTested[2][0]) resultMoves[2][0] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq12,noeudV->seqi_n,routeV->vehicle);
-			if (shouldBeTested[3][0]) resultMoves[3][0] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq21,noeudV->seqi_n,routeV->vehicle);
+			if (shouldBeTested[2][0]) resultMoves[2][0] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq12, nodeV->seqi_n, routeV->vehicle);
+			if (shouldBeTested[3][0]) resultMoves[3][0] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeV->vehicle);
 		}
 	}
 
-	if (!noeudV->estUnDepot)
+	if (!nodeV->isDepot)
 	{
-		if (!noeudU->estUnDepot)
+		if (!nodeU->isDepot)
 		{
-			if (shouldBeTested[1][1]) resultMoves[1][1] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq1,y->seqi_n,routeV->vehicle);
-			if (!x->estUnDepot)
+			if (shouldBeTested[1][1]) resultMoves[1][1] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq1, y->seqi_n, routeV->vehicle);
+			if (!x->isDepot)
 			{
-				if (shouldBeTested[2][1]) resultMoves[2][1] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq12,y->seqi_n,routeV->vehicle);
-				if (shouldBeTested[3][1]) resultMoves[3][1] += seq->evaluation(noeudV->pred->seq0_i,noeudU->seq21,y->seqi_n,routeV->vehicle);
+				if (shouldBeTested[2][1]) resultMoves[2][1] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq12, y->seqi_n, routeV->vehicle);
+				if (shouldBeTested[3][1]) resultMoves[3][1] += seq->evaluation(nodeV->pred->seq0_i, nodeU->seq21, y->seqi_n, routeV->vehicle);
 			}
 		}
-		if (!y->estUnDepot && !noeudU->estUnDepot && !x->estUnDepot)
+		if (!y->isDepot && !nodeU->isDepot && !x->isDepot)
 		{
 			if (shouldBeTested[2][2] || shouldBeTested[2][3])
 			{
-				temp = seq->evaluation(noeudV->pred->seq0_i,noeudU->seq12,y->suiv->seqi_n,routeV->vehicle);
+				temp = seq->evaluation(nodeV->pred->seq0_i, nodeU->seq12, y->nextNode->seqi_n, routeV->vehicle);
 				resultMoves[2][2] += temp ;
 				resultMoves[2][3] += temp ;
 			}
 			if (shouldBeTested[3][2] || shouldBeTested[3][3])
 			{
-				temp = seq->evaluation(noeudV->pred->seq0_i,noeudU->seq21,y->suiv->seqi_n,routeV->vehicle);
+				temp = seq->evaluation(nodeV->pred->seq0_i, nodeU->seq21, y->nextNode->seqi_n, routeV->vehicle);
 				resultMoves[3][2] += temp ;
 				resultMoves[3][3] += temp ;
 			}
@@ -434,24 +434,24 @@ int LocalSearch::interRouteGeneralInsert()
 
 	/* AN IMPROVING MOVE HAS BEEN DETECTED, IT IS DIRECTLY APPLIED */
 
-	Noeud * placeV = noeudV->pred ;
-	Noeud * placeU = noeudU->pred ;
+	Node * placeV = nodeV->pred ;
+	Node * placeU = nodeU->pred ;
 	reinitSingleDayMoves(placeU->route); // Say that all moves involving this route must be tested again
 	reinitSingleDayMoves(placeV->route); // Say that all moves involving this route must be tested again
 
 	// Moving the nodes in the solution structure
-	if ( ibest == 1 || ibest == 2) insertNoeud(noeudU,placeV);
-	if ( ibest == 2) insertNoeud(x,noeudU);
-	if ( ibest == 3 ) { insertNoeud(x,placeV); insertNoeud(noeudU,x); }
+	if ( ibest == 1 || ibest == 2) insertNoeud(nodeU, placeV);
+	if ( ibest == 2) insertNoeud(x, nodeU);
+	if ( ibest == 3 ) { insertNoeud(x,placeV); insertNoeud(nodeU, x); }
 
-	if ( jbest == 1 || jbest == 2) insertNoeud(noeudV,placeU);
-	if ( jbest == 2) insertNoeud(y,noeudV);
-	if ( jbest == 3 ) { insertNoeud(y,placeU); insertNoeud(noeudV,y); }
+	if ( jbest == 1 || jbest == 2) insertNoeud(nodeV, placeU);
+	if ( jbest == 2) insertNoeud(y, nodeV);
+	if ( jbest == 3 ) { insertNoeud(y,placeU); insertNoeud(nodeV, y); }
 
 	// Update the pre-processed data on the subsequences of the route
 	placeU->route->updateRouteData(false);
 	placeV->route->updateRouteData(false);
-	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
+	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInterSwap ++ ;
@@ -462,20 +462,20 @@ int LocalSearch::interRoute2Opt ()
 {
 	// Testing 2-Opt* between U and V
 	double cost ;
-	SeqData * seq = noeudU->seq0_i ;
+	SeqData * seq = nodeU->seq0_i ;
 
-	if  (routeU->depot->cour != routeV->depot->cour || (noeudU->pred->estUnDepot && noeudV->estUnDepot)) 
+	if  (routeU->depot->cour != routeV->depot->cour || (nodeU->pred->isDepot && nodeV->isDepot))
 		return 0 ; // Cannot do a 2-Opt* if the depot is placed in the wrong way
 
 	double costZero = routeU->currentRouteCost + routeV->currentRouteCost ; // Cost before the move
 
 	// Lower bound on the move value
-	cost = seq->evaluationLB(noeudU->pred->seq0_i,y->seqi_n,routeU->vehicle) + seq->evaluationLB(noeudV->seq0_i,noeudU->seqi_n,routeV->vehicle) - costZero ;
+	cost = seq->evaluationLB(nodeU->pred->seq0_i, y->seqi_n, routeU->vehicle) + seq->evaluationLB(nodeV->seq0_i, nodeU->seqi_n, routeV->vehicle) - costZero ;
 	if ( cost  > -EPSILON_LS ) 
 		return 0 ; // Exit if no chance of improvement
 
 	// Exact move evaluation
-	cost = seq->evaluation(noeudU->pred->seq0_i,y->seqi_n,routeU->vehicle) + seq->evaluation(noeudV->seq0_i,noeudU->seqi_n,routeV->vehicle) - costZero ;
+	cost = seq->evaluation(nodeU->pred->seq0_i, y->seqi_n, routeU->vehicle) + seq->evaluation(nodeV->seq0_i, nodeU->seqi_n, routeV->vehicle) - costZero ;
 	if ( cost  > -EPSILON_LS ) 
 		return 0 ; 
 
@@ -483,61 +483,61 @@ int LocalSearch::interRoute2Opt ()
 
 	reinitSingleDayMoves(routeU);  // Say that all moves involving this route must be tested again
 	reinitSingleDayMoves(routeV);  // Say that all moves involving this route must be tested again
-	Noeud * tempU = noeudU ;
-	noeudU = noeudU->pred ;
-	x = noeudU->suiv ;
+	Node * tempU = nodeU ;
+    nodeU = nodeU->pred ;
+	x = nodeU->nextNode ;
 
 	// Updating the solution
-	Noeud * count ;
-	Noeud * depotU = routeU->depot ;
-	Noeud * depotV = routeV->depot ;
-	Noeud * depotUFin = depotU->pred ;
-	Noeud * depotVFin = depotV->pred ;
-	Noeud * depotUpred = depotUFin->pred ;
+	Node * count ;
+	Node * depotU = routeU->depot ;
+	Node * depotV = routeV->depot ;
+	Node * depotUFin = depotU->pred ;
+	Node * depotVFin = depotV->pred ;
+	Node * depotUpred = depotUFin->pred ;
 
 	count = y ;
-	while ( !count->estUnDepot )
+	while ( !count->isDepot )
 	{
 		count->route = routeU ;
-		count = count->suiv ;
+		count = count->nextNode ;
 	}
 
 	count = x ;
-	while ( !count->estUnDepot )
+	while ( !count->isDepot )
 	{
 		count->route = routeV ;
-		count = count->suiv ;
+		count = count->nextNode ;
 	}
 
-	noeudU->suiv = y ;
-	y->pred = noeudU ;
-	noeudV->suiv = x ;
-	x->pred = noeudV ;
+    nodeU->nextNode = y ;
+	y->pred = nodeU ;
+    nodeV->nextNode = x ;
+	x->pred = nodeV ;
 
-	if (x->estUnDepot)
+	if (x->isDepot)
 	{
 		depotUFin->pred = depotVFin->pred ;
-		depotUFin->pred->suiv = depotUFin ;
-		noeudV->suiv = depotVFin ;
-		depotVFin->pred = noeudV ;
+		depotUFin->pred->nextNode = depotUFin ;
+        nodeV->nextNode = depotVFin ;
+		depotVFin->pred = nodeV ;
 	}
 	else
 	{
 		depotUFin->pred = depotVFin->pred ;
-		depotUFin->pred->suiv = depotUFin ;
+		depotUFin->pred->nextNode = depotUFin ;
 		depotVFin->pred = depotUpred ;
-		depotVFin->pred->suiv = depotVFin ;
+		depotVFin->pred->nextNode = depotVFin ;
 	}
 
 	// Update the pre-processed data on the subsequences of the route
 	routeU->updateRouteData(false);
 	routeV->updateRouteData(false);
-	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
+	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
-	noeudU = tempU ;
-	x = noeudU->suiv ;
+    nodeU = tempU ;
+	x = nodeU->nextNode ;
 	return 1 ; // Return Success
 }
 
@@ -545,12 +545,12 @@ int LocalSearch::interRoute2Opt ()
 int LocalSearch::interRoute2OptInv()
 {
 	// 2-Opt* with route inversions
-	SeqData * seq = noeudU->seq0_i ;
+	SeqData * seq = nodeU->seq0_i ;
 	double cost ;
 	double costTemp ;
 	double costTempReverse = 1.e30 ;
 	bool reverseRouteU, reverseRouteV ; 
-	if (noeudU->route == noeudV->route) { return 0 ; }
+	if (nodeU->route == nodeV->route) { return 0 ; }
 	double costZero = routeU->currentRouteCost + routeV->currentRouteCost ;
 
 	// Compute a lower bound on the value of the move
@@ -560,8 +560,8 @@ int LocalSearch::interRoute2OptInv()
 	if (costTemp < costTempReverse) { cost += costTemp ; reverseRouteU = false ; }
 	else  { cost += costTempReverse ; reverseRouteU = true ; }
 
-	costTemp = seq->evaluationLB(noeudV->seq0_i,noeudU->seqi_0,routeV->vehicle) ;
-	costTempReverse = seq->evaluationLB(noeudU->seq0_i,noeudV->seqi_0,routeV->vehicle) ;
+	costTemp = seq->evaluationLB(nodeV->seq0_i, nodeU->seqi_0, routeV->vehicle) ;
+	costTempReverse = seq->evaluationLB(nodeU->seq0_i, nodeV->seqi_0, routeV->vehicle) ;
 	if (costTemp < costTempReverse) { cost += costTemp ; reverseRouteV = false ; }
 	else  { cost += costTempReverse ; reverseRouteV = true ; }
 
@@ -575,8 +575,8 @@ int LocalSearch::interRoute2OptInv()
 	if (costTemp < costTempReverse) { cost += costTemp ; reverseRouteU = false ; }
 	else  { cost += costTempReverse ; reverseRouteU = true ; }
 
-	costTemp = seq->evaluation(noeudV->seq0_i,noeudU->seqi_0,routeV->vehicle) ;
-	costTempReverse = seq->evaluation(noeudU->seq0_i,noeudV->seqi_0,routeV->vehicle) ;
+	costTemp = seq->evaluation(nodeV->seq0_i, nodeU->seqi_0, routeV->vehicle) ;
+	costTempReverse = seq->evaluation(nodeU->seq0_i, nodeV->seqi_0, routeV->vehicle) ;
 	if (costTemp < costTempReverse) { cost += costTemp ; reverseRouteV = false ; }
 	else  { cost += costTempReverse ; reverseRouteV = true ; }
 
@@ -585,64 +585,64 @@ int LocalSearch::interRoute2OptInv()
 
 	/* AN IMPROVING MOVE HAS BEEN DETECTED, IT IS DIRECTLY APPLIED */
 
-	reinitSingleDayMoves(noeudU->route);  // Say that all moves involving this route must be tested again
-	reinitSingleDayMoves(noeudV->route);  // Say that all moves involving this route must be tested again
-	Noeud * depotU = routeU->depot ;
-	Noeud * depotV = routeV->depot ;
-	Noeud * depotUFin = routeU->depot->pred ;
-	Noeud * depotVFin = routeV->depot->pred ;
-	Noeud * depotUSuiv = depotU->suiv ;
+	reinitSingleDayMoves(nodeU->route);  // Say that all moves involving this route must be tested again
+	reinitSingleDayMoves(nodeV->route);  // Say that all moves involving this route must be tested again
+	Node * depotU = routeU->depot ;
+	Node * depotV = routeV->depot ;
+	Node * depotUFin = routeU->depot->pred ;
+	Node * depotVFin = routeV->depot->pred ;
+	Node * depotUSuiv = depotU->nextNode ;
 
 	// Update the solution
-	Noeud * temp ;
-	Noeud * yy = y ;
-	Noeud * uu = noeudU ;
+	Node * temp ;
+	Node * yy = y ;
+	Node * uu = nodeU ;
 
-	while ( !yy->estUnDepot )
+	while ( !yy->isDepot )
 	{
-		temp = yy->suiv ;
-		yy->suiv = yy->pred ;
+		temp = yy->nextNode ;
+		yy->nextNode = yy->pred ;
 		yy->pred = temp ;
 		yy->route = routeU ;
 		yy = temp ;
 	}
 
-	while ( !uu->estUnDepot )
+	while ( !uu->isDepot )
 	{
 		temp = uu->pred ;
-		uu->pred = uu->suiv ;
-		uu->suiv = temp ;
+		uu->pred = uu->nextNode ;
+		uu->nextNode = temp ;
 		uu->route = routeV ;
 		uu = temp ;
 	}
 
-	noeudV->suiv = noeudU ;
-	noeudU->pred = noeudV ;
-	y->suiv = x ;
+    nodeV->nextNode = nodeU ;
+    nodeU->pred = nodeV ;
+	y->nextNode = x ;
 	x->pred = y ;
 
-	if (y->estUnDepot)
+	if (y->isDepot)
 	{
-		depotVFin->suiv = depotV ;
+		depotVFin->nextNode = depotV ;
 		depotVFin->pred = depotUSuiv ;
-		depotVFin->pred->suiv = depotVFin ;
-		depotU->suiv = x ;
+		depotVFin->pred->nextNode = depotVFin ;
+		depotU->nextNode = x ;
 		x->pred = depotU ;
 	}
-	else if (noeudU->estUnDepot )
+	else if (nodeU->isDepot )
 	{
-		depotU->suiv = depotVFin->pred ;
-		depotU->suiv->pred = depotU ;
+		depotU->nextNode = depotVFin->pred ;
+		depotU->nextNode->pred = depotU ;
 		depotU->pred = depotUFin ;
-		depotVFin->pred = noeudV ;
-		noeudV->suiv = depotVFin ;
+		depotVFin->pred = nodeV ;
+        nodeV->nextNode = depotVFin ;
 	}
 	else
 	{
-		depotU->suiv = depotVFin->pred ;
-		depotU->suiv->pred = depotU ;
+		depotU->nextNode = depotVFin->pred ;
+		depotU->nextNode->pred = depotU ;
 		depotVFin->pred = depotUSuiv ;
-		depotVFin->pred->suiv = depotVFin ;
+		depotVFin->pred->nextNode = depotVFin ;
 	}
 
 	// Reverse if needed
@@ -652,7 +652,7 @@ int LocalSearch::interRoute2OptInv()
 	// Update the pre-processed data on the subsequences of the route
 	routeU->updateRouteData(false);
 	routeV->updateRouteData(false);
-	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
+	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
@@ -662,11 +662,11 @@ int LocalSearch::interRoute2OptInv()
 int LocalSearch::intraRouteGeneralInsertDroite ()
 {
 	// For a pair of nodes U, V, IN THE SAME ROUTE, tests together the Relocate, Swap, and variants of CROSS and I-CROSS limited to two consecutive nodes.
-	Noeud * tempU = noeudU ;
-	Noeud * tempV = noeudV ;
+	Node * tempU = nodeU ;
+	Node * tempV = nodeV ;
 	bool turned = false ;
 
-	int decalage = noeudV->place - noeudU->place ; // Decalage is the difference of index between U and V
+	int decalage = nodeV->place - nodeU->place ; // Decalage is the difference of index between U and V
 	if (decalage >= -1 && decalage <= 1) return 0 ; // This means that U and V are already consecutive, testing these moves is useless
 
 	// If decalage < 0, this means that V is on the left of U in the route
@@ -674,22 +674,22 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	// And we deal in the following with only the case where V is on the right
 	if ( decalage < 0 )
 	{
-		noeudU = tempV ;
-		noeudV = tempU ;
-		x = noeudU->suiv ;
-		y = noeudV->suiv ;
+        nodeU = tempV ;
+        nodeV = tempU ;
+		x = nodeU->nextNode ;
+		y = nodeV->nextNode ;
 		decalage = -decalage ;
 		turned = true ;
 	}
 
 	double moveMin ;
 	int ibest, jbest ;
-	SeqData * seq = noeudU->seq0_i ;
-	Noeud * Upred = noeudU->pred ;
-	Noeud * placeU = noeudU->pred ;
-	Noeud * placeV = noeudV->pred ;
-	Noeud * xsuiv = x->suiv ;
-	Noeud * ysuiv = y->suiv ;
+	SeqData * seq = nodeU->seq0_i ;
+	Node * Upred = nodeU->pred ;
+	Node * placeU = nodeU->pred ;
+	Node * placeV = nodeV->pred ;
+	Node * xsuiv = x->nextNode ;
+	Node * ysuiv = y->nextNode ;
 	double costZero = routeU->currentRouteCost ;
 
 	// This table will keep the result of the moves
@@ -705,154 +705,154 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 
 	if (decalage >= 3) // General case
 	{
-		if (!noeudV->estUnDepot && turned) // relocate of V before U (V cannot be a depot, but U can be)
+		if (!nodeV->isDepot && turned) // relocate of V before U (V cannot be a depot, but U can be)
 		{
-			myseqs.clear();
-			myseqs.push_back(Upred->seq0_i);
-			myseqs.push_back(noeudV->seq1);
+			mySeqs.clear();
+			mySeqs.push_back(Upred->seq0_i);
+			mySeqs.push_back(nodeV->seq1);
 			// The intra-route moves are the only moves which can involve general subsequences (i,j) in the middle of the route
 			// To reduce a bit the pre-processing, we keep only sequences of limited size (<= 15), even if this involves to concatenate more pieces
 			// The concatenation of the good number of pieces is done by "addSeqDataInPieces"
-			addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-			myseqs.push_back(y->seqi_n);
-			resultMoves[0][1] = seq->evaluationLB(myseqs,routeU->vehicle);
-			if (!y->estUnDepot) // exchange U and (V,Y or Y,V)
+			addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+			mySeqs.push_back(y->seqi_n);
+			resultMoves[0][1] = seq->evaluationLB(mySeqs, routeU->vehicle);
+			if (!y->isDepot) // exchange U and (V,Y or Y,V)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq12);
-				addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-				myseqs.push_back(ysuiv->seqi_n);
-				resultMoves[0][2] = seq->evaluationLB(myseqs,routeU->vehicle);
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq21);
-				addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-				myseqs.push_back(ysuiv->seqi_n);
-				resultMoves[0][3] = seq->evaluationLB(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq12);
+				addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+				mySeqs.push_back(ysuiv->seqi_n);
+				resultMoves[0][2] = seq->evaluationLB(mySeqs, routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq21);
+				addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+				mySeqs.push_back(ysuiv->seqi_n);
+				resultMoves[0][3] = seq->evaluationLB(mySeqs, routeU->vehicle);
 			}
 		}
 
 		if (!turned)
 		{
-			myseqs.clear();
-			myseqs.push_back(Upred->seq0_i);
-			addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-			myseqs.push_back(noeudU->seq1);
-			myseqs.push_back(noeudV->seqi_n);
-			resultMoves[1][0] = seq->evaluationLB(myseqs,routeU->vehicle);
+			mySeqs.clear();
+			mySeqs.push_back(Upred->seq0_i);
+			addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+			mySeqs.push_back(nodeU->seq1);
+			mySeqs.push_back(nodeV->seqi_n);
+			resultMoves[1][0] = seq->evaluationLB(mySeqs, routeU->vehicle);
 		}
-		if (!noeudV->estUnDepot) // exchange U and V
+		if (!nodeV->isDepot) // exchange U and V
 		{
-			myseqs.clear();
-			myseqs.push_back(Upred->seq0_i);
-			myseqs.push_back(noeudV->seq1);
-			addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-			myseqs.push_back(noeudU->seq1);
-			myseqs.push_back(y->seqi_n);
-			resultMoves[1][1] = seq->evaluationLB(myseqs,routeU->vehicle);
-			if (!y->estUnDepot && turned) // exchange U and (V,Y or Y,V)
+			mySeqs.clear();
+			mySeqs.push_back(Upred->seq0_i);
+			mySeqs.push_back(nodeV->seq1);
+			addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+			mySeqs.push_back(nodeU->seq1);
+			mySeqs.push_back(y->seqi_n);
+			resultMoves[1][1] = seq->evaluationLB(mySeqs, routeU->vehicle);
+			if (!y->isDepot && turned) // exchange U and (V,Y or Y,V)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq12);
-				addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq1);
-				myseqs.push_back(ysuiv->seqi_n);
-				resultMoves[1][2] = seq->evaluationLB(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq12);
+				addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq1);
+				mySeqs.push_back(ysuiv->seqi_n);
+				resultMoves[1][2] = seq->evaluationLB(mySeqs, routeU->vehicle);
 
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq21);
-				addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq1);
-				myseqs.push_back(ysuiv->seqi_n);
-				resultMoves[1][3] = seq->evaluationLB(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq21);
+				addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq1);
+				mySeqs.push_back(ysuiv->seqi_n);
+				resultMoves[1][3] = seq->evaluationLB(mySeqs, routeU->vehicle);
 			}
 		}
 
-		if (!x->estUnDepot)
+		if (!x->isDepot)
 		{
 			if (!turned)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq12);
-				myseqs.push_back(noeudV->seqi_n);
-				resultMoves[2][0] = seq->evaluationLB(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq12);
+				mySeqs.push_back(nodeV->seqi_n);
+				resultMoves[2][0] = seq->evaluationLB(mySeqs, routeU->vehicle);
 			}
 
-			if (!noeudV->estUnDepot) // exchange U,X and V
+			if (!nodeV->isDepot) // exchange U,X and V
 			{
 				if (!turned)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq1);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq12);
-					myseqs.push_back(y->seqi_n);
-					resultMoves[2][1] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq1);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq12);
+					mySeqs.push_back(y->seqi_n);
+					resultMoves[2][1] = seq->evaluationLB(mySeqs, routeU->vehicle);
 				}
-				if (!y->estUnDepot) // exchange U,X and (V,Y or Y,V)
+				if (!y->isDepot) // exchange U,X and (V,Y or Y,V)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq12);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq12);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[2][2] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq12);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq12);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[2][2] = seq->evaluationLB(mySeqs, routeU->vehicle);
 
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq21);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq12);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[2][3] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq21);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq12);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[2][3] = seq->evaluationLB(mySeqs, routeU->vehicle);
 				}
 			}
 
 			if (!turned)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq21);
-				myseqs.push_back(noeudV->seqi_n);
-				resultMoves[3][0] = seq->evaluationLB(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq21);
+				mySeqs.push_back(nodeV->seqi_n);
+				resultMoves[3][0] = seq->evaluationLB(mySeqs, routeU->vehicle);
 			}
-			if (!noeudV->estUnDepot) // exchange X,U and V
+			if (!nodeV->isDepot) // exchange X,U and V
 			{
 				if (!turned)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq1);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq21);
-					myseqs.push_back(y->seqi_n);
-					resultMoves[3][1] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq1);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq21);
+					mySeqs.push_back(y->seqi_n);
+					resultMoves[3][1] = seq->evaluationLB(mySeqs, routeU->vehicle);
 				}
-				if (!y->estUnDepot) // exchange X,U and (V,Y or Y,V)
+				if (!y->isDepot) // exchange X,U and (V,Y or Y,V)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq12);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq21);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[3][2] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq12);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq21);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[3][2] = seq->evaluationLB(mySeqs, routeU->vehicle);
 
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq21);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq21);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[3][3] = seq->evaluationLB(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq21);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq21);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[3][3] = seq->evaluationLB(mySeqs, routeU->vehicle);
 				}
 			}
 		}
@@ -860,23 +860,23 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	else if (decalage == 2) // U and V are almost consecutive, we are in this situation : UXVY. Useful moves must be tested as special cases
 	{
 		// XUVY
-		resultMoves[1][0] = seq->evaluationLB(Upred->seq0_i,noeudU->seq21,noeudV->seqi_n,routeU->vehicle);
-		if (!noeudV->estUnDepot)
+		resultMoves[1][0] = seq->evaluationLB(Upred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeU->vehicle);
+		if (!nodeV->isDepot)
 		{
 			// VXUY
-			resultMoves[1][1] = seq->evaluationLB(Upred->seq0_i,noeudV->seq1,noeudU->seq21,y->seqi_n,routeU->vehicle);
+			resultMoves[1][1] = seq->evaluationLB(Upred->seq0_i, nodeV->seq1, nodeU->seq21, y->seqi_n, routeU->vehicle);
 			// VUXY
-			resultMoves[2][1] = seq->evaluationLB(Upred->seq0_i,noeudV->seq1,noeudU->seq12,y->seqi_n,routeU->vehicle);
-			if (!y->estUnDepot)
+			resultMoves[2][1] = seq->evaluationLB(Upred->seq0_i, nodeV->seq1, nodeU->seq12, y->seqi_n, routeU->vehicle);
+			if (!y->isDepot)
 			{
 				// VYXU
-				resultMoves[1][2] = seq->evaluationLB(Upred->seq0_i,noeudV->seq12,noeudU->seq21,ysuiv->seqi_n,routeU->vehicle);
+				resultMoves[1][2] = seq->evaluationLB(Upred->seq0_i, nodeV->seq12, nodeU->seq21, ysuiv->seqi_n, routeU->vehicle);
 				// YVXU
-				resultMoves[1][3] = seq->evaluationLB(Upred->seq0_i,noeudV->seq21,noeudU->seq21,ysuiv->seqi_n,routeU->vehicle);
+				resultMoves[1][3] = seq->evaluationLB(Upred->seq0_i, nodeV->seq21, nodeU->seq21, ysuiv->seqi_n, routeU->vehicle);
 				// VYUX
-				resultMoves[2][2] = seq->evaluationLB(Upred->seq0_i,noeudV->seq12,noeudU->seq12,ysuiv->seqi_n,routeU->vehicle);
+				resultMoves[2][2] = seq->evaluationLB(Upred->seq0_i, nodeV->seq12, nodeU->seq12, ysuiv->seqi_n, routeU->vehicle);
 				// YVUX
-				resultMoves[2][3] = seq->evaluationLB(Upred->seq0_i,noeudV->seq21,noeudU->seq12,ysuiv->seqi_n,routeU->vehicle);
+				resultMoves[2][3] = seq->evaluationLB(Upred->seq0_i, nodeV->seq21, nodeU->seq12, ysuiv->seqi_n, routeU->vehicle);
 			}
 		}
 	}
@@ -900,184 +900,184 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	// Same procedure as previously, but with "seq->evaluation" instead of "seq->evaluationLB"
 	if (decalage >= 3)
 	{
-		if (!noeudV->estUnDepot && turned)
+		if (!nodeV->isDepot && turned)
 		{
 
 			if (shouldBeTested[0][1])
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq1);
-				addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-				myseqs.push_back(y->seqi_n);
-				resultMoves[0][1] = seq->evaluation(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq1);
+				addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+				mySeqs.push_back(y->seqi_n);
+				resultMoves[0][1] = seq->evaluation(mySeqs, routeU->vehicle);
 			}
 
-			if (!y->estUnDepot) // exchange U and (V,Y or Y,V)
+			if (!y->isDepot) // exchange U and (V,Y or Y,V)
 			{
 				if (shouldBeTested[0][2])
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq12);
-					addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[0][2] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq12);
+					addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[0][2] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
 
 				if (shouldBeTested[0][3])
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq21);
-					addSeqDataInPieces(noeudU,noeudV->place-1-noeudU->place,noeudU->jour);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[0][3] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq21);
+					addSeqDataInPieces(nodeU, nodeV->place - 1 - nodeU->place, nodeU->day);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[0][3] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
 			}
 		}
 
 		if (!turned && shouldBeTested[1][0])
 		{
-			myseqs.clear();
-			myseqs.push_back(Upred->seq0_i);
-			addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-			myseqs.push_back(noeudU->seq1);
-			myseqs.push_back(noeudV->seqi_n);
-			resultMoves[1][0] = seq->evaluation(myseqs,routeU->vehicle);
+			mySeqs.clear();
+			mySeqs.push_back(Upred->seq0_i);
+			addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+			mySeqs.push_back(nodeU->seq1);
+			mySeqs.push_back(nodeV->seqi_n);
+			resultMoves[1][0] = seq->evaluation(mySeqs, routeU->vehicle);
 		}
-		if (!noeudV->estUnDepot) // exchange U and V
+		if (!nodeV->isDepot) // exchange U and V
 		{
 			if (shouldBeTested[1][1])
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				myseqs.push_back(noeudV->seq1);
-				addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq1);
-				myseqs.push_back(y->seqi_n);
-				resultMoves[1][1] = seq->evaluation(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				mySeqs.push_back(nodeV->seq1);
+				addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq1);
+				mySeqs.push_back(y->seqi_n);
+				resultMoves[1][1] = seq->evaluation(mySeqs, routeU->vehicle);
 			}
 
-			if (!y->estUnDepot && turned) // exchange U and (V,Y or Y,V)
+			if (!y->isDepot && turned) // exchange U and (V,Y or Y,V)
 			{
 				if (shouldBeTested[1][2])
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq12);
-					addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq1);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[1][2] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq12);
+					addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq1);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[1][2] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
 
 				if (shouldBeTested[1][3])
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq21);
-					addSeqDataInPieces(x,noeudV->place-1-x->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq1);
-					myseqs.push_back(ysuiv->seqi_n);
-					resultMoves[1][3] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq21);
+					addSeqDataInPieces(x, nodeV->place - 1 - x->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq1);
+					mySeqs.push_back(ysuiv->seqi_n);
+					resultMoves[1][3] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
 			}
 		}
 
-		if (!x->estUnDepot)
+		if (!x->isDepot)
 		{
 			if (shouldBeTested[2][0] && !turned)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq12);
-				myseqs.push_back(noeudV->seqi_n);
-				resultMoves[2][0] = seq->evaluation(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq12);
+				mySeqs.push_back(nodeV->seqi_n);
+				resultMoves[2][0] = seq->evaluation(mySeqs, routeU->vehicle);
 			}
 
-			if (!noeudV->estUnDepot) // exchange U,X and V
+			if (!nodeV->isDepot) // exchange U,X and V
 			{
 				if (shouldBeTested[2][1] && !turned)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq1);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq12);
-					myseqs.push_back(y->seqi_n);
-					resultMoves[2][1] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq1);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq12);
+					mySeqs.push_back(y->seqi_n);
+					resultMoves[2][1] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
-				if (!y->estUnDepot) // exchange U,X and (V,Y or Y,V)
+				if (!y->isDepot) // exchange U,X and (V,Y or Y,V)
 				{
 					if (shouldBeTested[2][2])
 					{
-						myseqs.clear();
-						myseqs.push_back(Upred->seq0_i);
-						myseqs.push_back(noeudV->seq12);
-						addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-						myseqs.push_back(noeudU->seq12);
-						myseqs.push_back(ysuiv->seqi_n);
-						resultMoves[2][2] = seq->evaluation(myseqs,routeU->vehicle);
+						mySeqs.clear();
+						mySeqs.push_back(Upred->seq0_i);
+						mySeqs.push_back(nodeV->seq12);
+						addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+						mySeqs.push_back(nodeU->seq12);
+						mySeqs.push_back(ysuiv->seqi_n);
+						resultMoves[2][2] = seq->evaluation(mySeqs, routeU->vehicle);
 					}
 
 					if (shouldBeTested[2][3])
 					{
-						myseqs.clear();
-						myseqs.push_back(Upred->seq0_i);
-						myseqs.push_back(noeudV->seq21);
-						addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-						myseqs.push_back(noeudU->seq12);
-						myseqs.push_back(ysuiv->seqi_n);
-						resultMoves[2][3] = seq->evaluation(myseqs,routeU->vehicle);
+						mySeqs.clear();
+						mySeqs.push_back(Upred->seq0_i);
+						mySeqs.push_back(nodeV->seq21);
+						addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+						mySeqs.push_back(nodeU->seq12);
+						mySeqs.push_back(ysuiv->seqi_n);
+						resultMoves[2][3] = seq->evaluation(mySeqs, routeU->vehicle);
 					}
 				}
 			}
 
 			if (shouldBeTested[3][0] && !turned)
 			{
-				myseqs.clear();
-				myseqs.push_back(Upred->seq0_i);
-				addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-				myseqs.push_back(noeudU->seq21);
-				myseqs.push_back(noeudV->seqi_n);
-				resultMoves[3][0] = seq->evaluation(myseqs,routeU->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(Upred->seq0_i);
+				addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+				mySeqs.push_back(nodeU->seq21);
+				mySeqs.push_back(nodeV->seqi_n);
+				resultMoves[3][0] = seq->evaluation(mySeqs, routeU->vehicle);
 			}
-			if (!noeudV->estUnDepot) // exchange X,U and V
+			if (!nodeV->isDepot) // exchange X,U and V
 			{
 				if (shouldBeTested[3][1] && !turned)
 				{
-					myseqs.clear();
-					myseqs.push_back(Upred->seq0_i);
-					myseqs.push_back(noeudV->seq1);
-					addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-					myseqs.push_back(noeudU->seq21);
-					myseqs.push_back(y->seqi_n);
-					resultMoves[3][1] = seq->evaluation(myseqs,routeU->vehicle);
+					mySeqs.clear();
+					mySeqs.push_back(Upred->seq0_i);
+					mySeqs.push_back(nodeV->seq1);
+					addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+					mySeqs.push_back(nodeU->seq21);
+					mySeqs.push_back(y->seqi_n);
+					resultMoves[3][1] = seq->evaluation(mySeqs, routeU->vehicle);
 				}
-				if (!y->estUnDepot) // exchange X,U and (V,Y or Y,V)
+				if (!y->isDepot) // exchange X,U and (V,Y or Y,V)
 				{
 					if (shouldBeTested[3][2])
 					{
-						myseqs.clear();
-						myseqs.push_back(Upred->seq0_i);
-						myseqs.push_back(noeudV->seq12);
-						addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-						myseqs.push_back(noeudU->seq21);
-						myseqs.push_back(ysuiv->seqi_n);
-						resultMoves[3][2] = seq->evaluation(myseqs,routeU->vehicle);
+						mySeqs.clear();
+						mySeqs.push_back(Upred->seq0_i);
+						mySeqs.push_back(nodeV->seq12);
+						addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+						mySeqs.push_back(nodeU->seq21);
+						mySeqs.push_back(ysuiv->seqi_n);
+						resultMoves[3][2] = seq->evaluation(mySeqs, routeU->vehicle);
 					}
 
 					if (shouldBeTested[3][3])
 					{
-						myseqs.clear();
-						myseqs.push_back(Upred->seq0_i);
-						myseqs.push_back(noeudV->seq21);
-						addSeqDataInPieces(xsuiv,noeudV->place-1-xsuiv->place,noeudU->jour);
-						myseqs.push_back(noeudU->seq21);
-						myseqs.push_back(ysuiv->seqi_n);
-						resultMoves[3][3] = seq->evaluation(myseqs,routeU->vehicle);
+						mySeqs.clear();
+						mySeqs.push_back(Upred->seq0_i);
+						mySeqs.push_back(nodeV->seq21);
+						addSeqDataInPieces(xsuiv, nodeV->place - 1 - xsuiv->place, nodeU->day);
+						mySeqs.push_back(nodeU->seq21);
+						mySeqs.push_back(ysuiv->seqi_n);
+						resultMoves[3][3] = seq->evaluation(mySeqs, routeU->vehicle);
 					}
 				}
 			}
@@ -1086,23 +1086,23 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	else if (decalage == 2)
 	{
 		// XUVY
-		if (shouldBeTested[1][0]) resultMoves[1][0] = seq->evaluation(Upred->seq0_i,noeudU->seq21,noeudV->seqi_n,routeU->vehicle);
-		if (!noeudV->estUnDepot)
+		if (shouldBeTested[1][0]) resultMoves[1][0] = seq->evaluation(Upred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeU->vehicle);
+		if (!nodeV->isDepot)
 		{
 			// VXUY
-			if (shouldBeTested[1][1]) resultMoves[1][1] = seq->evaluation(Upred->seq0_i,noeudV->seq1,noeudU->seq21,y->seqi_n,routeU->vehicle);
+			if (shouldBeTested[1][1]) resultMoves[1][1] = seq->evaluation(Upred->seq0_i, nodeV->seq1, nodeU->seq21, y->seqi_n, routeU->vehicle);
 			// VUXY
-			if (shouldBeTested[2][1]) resultMoves[2][1] = seq->evaluation(Upred->seq0_i,noeudV->seq1,noeudU->seq12,y->seqi_n,routeU->vehicle);
-			if (!y->estUnDepot)
+			if (shouldBeTested[2][1]) resultMoves[2][1] = seq->evaluation(Upred->seq0_i, nodeV->seq1, nodeU->seq12, y->seqi_n, routeU->vehicle);
+			if (!y->isDepot)
 			{
 				// VYXU
-				if (shouldBeTested[1][2]) resultMoves[1][2] = seq->evaluation(Upred->seq0_i,noeudV->seq12,noeudU->seq21,ysuiv->seqi_n,routeU->vehicle);
+				if (shouldBeTested[1][2]) resultMoves[1][2] = seq->evaluation(Upred->seq0_i, nodeV->seq12, nodeU->seq21, ysuiv->seqi_n, routeU->vehicle);
 				// YVXU
-				if (shouldBeTested[1][3]) resultMoves[1][3] = seq->evaluation(Upred->seq0_i,noeudV->seq21,noeudU->seq21,ysuiv->seqi_n,routeU->vehicle);
+				if (shouldBeTested[1][3]) resultMoves[1][3] = seq->evaluation(Upred->seq0_i, nodeV->seq21, nodeU->seq21, ysuiv->seqi_n, routeU->vehicle);
 				// VYUX
-				if (shouldBeTested[2][2]) resultMoves[2][2] = seq->evaluation(Upred->seq0_i,noeudV->seq12,noeudU->seq12,ysuiv->seqi_n,routeU->vehicle);
+				if (shouldBeTested[2][2]) resultMoves[2][2] = seq->evaluation(Upred->seq0_i, nodeV->seq12, nodeU->seq12, ysuiv->seqi_n, routeU->vehicle);
 				// YVUX
-				if (shouldBeTested[2][3]) resultMoves[2][3] = seq->evaluation(Upred->seq0_i,noeudV->seq21,noeudU->seq12,ysuiv->seqi_n,routeU->vehicle);
+				if (shouldBeTested[2][3]) resultMoves[2][3] = seq->evaluation(Upred->seq0_i, nodeV->seq21, nodeU->seq12, ysuiv->seqi_n, routeU->vehicle);
 			}
 		}
 	}
@@ -1126,11 +1126,11 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 
 	// No improving move has been found
 	if ( ibest == 0 && jbest == 0 ) 
-	{ 
-		noeudU = tempU ;
-		noeudV = tempV ;
-		x = noeudU->suiv ;
-		y = noeudV->suiv ;
+	{
+        nodeU = tempU ;
+        nodeV = tempV ;
+		x = nodeU->nextNode ;
+		y = nodeV->nextNode ;
 		return 0 ;
 	}
 
@@ -1144,36 +1144,36 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	// Update the solution
 	if (decalage >= 3)
 	{
-		if ( ibest == 1 || ibest == 2) insertNoeud(noeudU,placeV);
-		if ( ibest == 2 ) insertNoeud(x,noeudU);
-		if ( ibest == 3 ) { insertNoeud(x,placeV); insertNoeud(noeudU,x); }
+		if ( ibest == 1 || ibest == 2) insertNoeud(nodeU, placeV);
+		if ( ibest == 2 ) insertNoeud(x, nodeU);
+		if ( ibest == 3 ) { insertNoeud(x,placeV); insertNoeud(nodeU, x); }
 
-		if ( jbest == 1 || jbest == 2) insertNoeud(noeudV,placeU);
-		if ( jbest == 2) insertNoeud(y,noeudV);
-		if ( jbest == 3 ) { insertNoeud(y,placeU); insertNoeud(noeudV,y); }
+		if ( jbest == 1 || jbest == 2) insertNoeud(nodeV, placeU);
+		if ( jbest == 2) insertNoeud(y, nodeV);
+		if ( jbest == 3 ) { insertNoeud(y,placeU); insertNoeud(nodeV, y); }
 	}
 
 	// Special cases of decalage == 2
 	else if (decalage == 2)
 	{
-		if (ibest == 1 && jbest == 0) { insertNoeud(noeudU,x); }
-		else if (ibest == 1 && jbest == 1) { insertNoeud(x,noeudV); insertNoeud(noeudU,x);  }
-		else if (ibest == 1 && jbest == 2) { insertNoeud(x,y); insertNoeud(noeudU,x);  }
-		else if (ibest == 1 && jbest == 3) { insertNoeud(noeudV,y); insertNoeud(x,noeudV); insertNoeud(noeudU,x);  }
-		else if (ibest == 2 && jbest == 1) { insertNoeud(noeudV,noeudU->pred) ;  }
-		else if (ibest == 2 && jbest == 2) { insertNoeud(noeudV,noeudU->pred) ;  insertNoeud(y,noeudV) ; }
-		else if (ibest == 2 && jbest == 3) { insertNoeud(y,noeudU->pred) ;  insertNoeud(noeudV,y) ; }
+		if (ibest == 1 && jbest == 0) { insertNoeud(nodeU, x); }
+		else if (ibest == 1 && jbest == 1) { insertNoeud(x, nodeV); insertNoeud(nodeU, x);  }
+		else if (ibest == 1 && jbest == 2) { insertNoeud(x,y); insertNoeud(nodeU, x);  }
+		else if (ibest == 1 && jbest == 3) { insertNoeud(nodeV, y); insertNoeud(x, nodeV); insertNoeud(nodeU, x);  }
+		else if (ibest == 2 && jbest == 1) { insertNoeud(nodeV, nodeU->pred) ;  }
+		else if (ibest == 2 && jbest == 2) { insertNoeud(nodeV, nodeU->pred) ;  insertNoeud(y, nodeV) ; }
+		else if (ibest == 2 && jbest == 3) { insertNoeud(y, nodeU->pred) ;  insertNoeud(nodeV, y) ; }
 		else throw string ("ERROR move intra-route") ;
 	} 
 
 	routeU->updateRouteData(false); // Update the pre-processed data on the subsequences of the route
-	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
+	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
 	researchCompleted = false ; // Not finished the search
 	nbIntraSwap ++ ;
-	noeudU = tempU ;
-	noeudV = tempV ;
-	x = noeudU->suiv ;
-	y = noeudV->suiv ;
+    nodeU = tempU ;
+    nodeV = tempV ;
+	x = nodeU->nextNode ;
+	y = nodeV->nextNode ;
 	return 1 ; // Return Success
 }
 
@@ -1181,48 +1181,48 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 int LocalSearch::intraRoute2Opt ()
 {
 	// Evaluation procedure for 2-Opt
-	Noeud * nodeNum = noeudU->suiv ;
-	Noeud * nodeUpred = noeudU->pred ;
-	Noeud * temp ;
-	SeqData * seq = noeudU->seq0_i ;
+	Node * nodeNum = nodeU->nextNode ;
+	Node * nodeUpred = nodeU->pred ;
+	Node * temp ;
+	SeqData * seq = nodeU->seq0_i ;
 
 	double cost ;
 	double costZero = routeU->currentRouteCost ;
 
-	myseqs.clear();
-	myseqs.push_back(noeudU->pred->seq0_i);
-	addReverseSeqDataInPieces(noeudU,noeudV->place-noeudU->place,noeudU->jour);
-	myseqs.push_back(noeudV->suiv->seqi_n);
+	mySeqs.clear();
+	mySeqs.push_back(nodeU->pred->seq0_i);
+	addReverseSeqDataInPieces(nodeU, nodeV->place - nodeU->place, nodeU->day);
+	mySeqs.push_back(nodeV->nextNode->seqi_n);
 
 	// Compute the lower bound on move value and exits if no possible improvement
-	cost = seq->evaluationLB(myseqs,routeU->vehicle) ;
+	cost = seq->evaluationLB(mySeqs, routeU->vehicle) ;
 	if (cost - costZero  > -EPSILON_LS)  
 		return 0 ;
 
 	// Compute the real move value
-	cost = seq->evaluation(myseqs,routeU->vehicle) ;
+	cost = seq->evaluation(mySeqs, routeU->vehicle) ;
 	if (cost - costZero  > -EPSILON_LS)  
 		return 0 ;
 
 	// Apply the move and update the solution
 	reinitSingleDayMoves(routeU);
-	noeudU->pred = nodeNum ;
-	noeudU->suiv = y ;
+    nodeU->pred = nodeNum ;
+    nodeU->nextNode = y ;
 
-	while ( nodeNum != noeudV )
+	while (nodeNum != nodeV )
 	{
-		temp = nodeNum->suiv ;
-		nodeNum->suiv = nodeNum->pred ;
+		temp = nodeNum->nextNode ;
+		nodeNum->nextNode = nodeNum->pred ;
 		nodeNum->pred = temp ;
 		nodeNum = temp ;
 	}
 
-	noeudV->suiv = noeudV->pred ;
-	noeudV->pred = nodeUpred ;
-	nodeUpred->suiv = noeudV ;
-	y->pred = noeudU ;
+    nodeV->nextNode = nodeV->pred ;
+    nodeV->pred = nodeUpred ;
+	nodeUpred->nextNode = nodeV ;
+	y->pred = nodeU ;
 	routeU->updateRouteData(false);  // Update the pre-processed data on the subsequences of the route
-	setRouteVide(noeudU->jour); // Keep a pointer on the first empty route
+	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
 	researchCompleted = false ; // Not finished the search
 	nbIntra2Opt ++ ;
 	return 1 ; // Return Success
@@ -1237,8 +1237,8 @@ int LocalSearch::searchBetterPattern (int client)
 	int temp, calcul, depot ;
 	double depense = 0 ;
 	double meilleureDepense = 1.e30 ;
-	Noeud * noeudTravail ;
-	deplacementIntraJour = false ; 	// this flag is only raised in case there is a better insertion in the same day
+	Node * noeudTravail ;
+    intraDayDisplacement = false ; 	// this flag is only raised in case there is a better insertion in the same day
 
 	for (int pat = 0 ; pat < (int)params->cli[client].visits.size() ; pat ++)
 	{
@@ -1260,7 +1260,7 @@ int LocalSearch::searchBetterPattern (int client)
 				// a single delivery changes... and sometimes its even the same for different patterns)
 				// Still, this is a simplistic implementation for the tests PCARP, no need for the highest performance
 				if (noeudTravail->coutInsertion[pat] > 1.e29 || firstLoop)
-					computeCoutInsertion(noeudTravail,pat) ;
+                    computeCostInsertion(noeudTravail, pat) ;
 				depense += noeudTravail->coutInsertion[pat] ;
 			}
 		}
@@ -1278,7 +1278,7 @@ int LocalSearch::searchBetterPattern (int client)
 		throw string ("ERROR when computing the best pattern !") ;
 
 	// Applying the move if a better pattern has been found
-	if ( meilleurPattern.pat != pattern1.pat || meilleurPattern.dep != pattern1.dep || deplacementIntraJour)
+	if ( meilleurPattern.pat != pattern1.pat || meilleurPattern.dep != pattern1.dep || intraDayDisplacement)
 	{
 		// removing the current occurences of this customer
 		calcul = pattern1.pat ;
@@ -1303,12 +1303,12 @@ int LocalSearch::searchBetterPattern (int client)
 			calcul = calcul/2 ;
 			if (temp == 1)
 			{
-				Noeud * hereCli = &clients[params->formerNbDays - k + meilleurPattern.dep * params->formerNbDays][client] ;
-				Noeud * thereCli = hereCli->placeInsertion[indexMeilleur] ;
+				Node * hereCli = &clients[params->formerNbDays - k + meilleurPattern.dep * params->formerNbDays][client] ;
+				Node * thereCli = hereCli->placeInsertion[indexMeilleur] ;
 				addNoeud(hereCli,thereCli);
 			}	
 		}
-		//cout << "Inserting Node " << client << " With pattern " << meilleurPattern.pat << " Flag is : " << deplacementIntraJour << endl ;
+		//cout << "Inserting Node " << client << " With pattern " << meilleurPattern.pat << " Flag is : " << intraDayDisplacement << endl ;
 
 		researchCompleted = false ;
 		return 1 ;
@@ -1316,21 +1316,21 @@ int LocalSearch::searchBetterPattern (int client)
 	else return 0 ;
 }
 
-void LocalSearch::computeCoutInsertion(Noeud * client, int pattern) 
+void LocalSearch::computeCostInsertion(Node * client, int pattern)
 {
 	// Computing the best cost for inserting a client in its day
 	Route * myRoute ;
 	client->coutInsertion[pattern] = 1.e30 ;
 	client->placeInsertion[pattern] = NULL ;
 
-	noeudU = client ;
-	x = noeudU->suiv ;
-	routeU = noeudU->route ;
+    nodeU = client ;
+	x = nodeU->nextNode ;
+	routeU = nodeU->route ;
 
 	// Find the best insertion for each route
-	for (int r=0 ; r < params->nombreVehicules[client->jour] ; r++)
+	for (int r=0 ; r < params->nombreVehicules[client->day] ; r++)
 	{
-		myRoute = &routes[client->jour][r] ;
+		myRoute = &routes[client->day][r] ;
 		if ( myRoute->coutInsertionClient[client->cour][pattern] > 1.e29 || firstLoop ) 
 			evalInsertClient(myRoute,client,pattern) ;
 
@@ -1342,17 +1342,17 @@ void LocalSearch::computeCoutInsertion(Noeud * client, int pattern)
 	}
 
 	// If its possible to improve the placement of a customer in a day where its already placed, and according to its current pattern, then we raise this flag
-	if (client->estPresent // its placed here
+	if (client->isPresent // its placed here
 		&& testingIncumbentPattern // with the same pattern
 		&& client->route->coutInsertionClient[client->cour][pattern] > client->coutInsertion[pattern] + EPSILON_LS) // but we can do better
-		deplacementIntraJour = true ;
+		intraDayDisplacement = true ;
 }
 
-void LocalSearch::evalInsertClient (Route * R,Noeud * U,int pattern) 
+void LocalSearch::evalInsertClient (Route * R, Node * U, int pattern)
 {
 	// Computing the least cost for inserting a client U in a route R
 	SeqData * seq = U->seq0_i ;
-	Noeud * courNoeud ;
+	Node * courNoeud ;
 	double leastCost = 1.e30 ;
 	double cost ;
 	bool firstLoopDep = true ;
@@ -1362,56 +1362,56 @@ void LocalSearch::evalInsertClient (Route * R,Noeud * U,int pattern)
 	// Here doing something a bit ugly, which is to store and modify from outside the pre-processed Seqdata "U->seq1"
 	// to include the good delivery quantity
 	double tempDemand = U->seq1->load ;
-	U->seq1->load = params->cli[U->cour].demandPatDay[params->cli[U->cour].visits[pattern].pat][U->jour];
+	U->seq1->load = params->cli[U->cour].demandPatDay[params->cli[U->cour].visits[pattern].pat][U->day];
 
 	// Some memory structures to avoid recomputing these things again and again
 	R->coutInsertionClient[U->cour][pattern] = 1.e30 ;
 	R->placeInsertionClient[U->cour][pattern] = NULL ;
 
-	if (!(U->route == R) || !U->estPresent)
+	if (!(U->route == R) || !U->isPresent)
 	{
 		// Case 1 : U is not in the route
-		courNoeud = R->depot->suiv ;
-		while (!courNoeud->estUnDepot || firstLoopDep)
+		courNoeud = R->depot->nextNode ;
+		while (!courNoeud->isDepot || firstLoopDep)
 		{
-			if (courNoeud->estUnDepot) firstLoopDep = false ;
+			if (courNoeud->isDepot) firstLoopDep = false ;
 			cost = seq->evaluation(courNoeud->pred->seq0_i,U->seq1,courNoeud->seqi_n,R->vehicle);
 			if ( cost < leastCost )
 			{
 				leastCost = cost ;
 				R->placeInsertionClient[U->cour][pattern] = courNoeud->pred ;
 			}
-			courNoeud = courNoeud->suiv ;
+			courNoeud = courNoeud->nextNode ;
 		}
 		R->coutInsertionClient[U->cour][pattern] = leastCost - seq->evaluation(R->depot->pred->seq0_i,R->vehicle);
 	}
 	else
 	{
 		// Case 2 : U is already in the route R
-		leastCost = seq->evaluation(U->pred->seq0_i,U->seq1,U->suiv->seqi_n,R->vehicle);
+		leastCost = seq->evaluation(U->pred->seq0_i, U->seq1, U->nextNode->seqi_n, R->vehicle);
 		R->placeInsertionClient[U->cour][pattern] = U->pred ;
-		courNoeud = R->depot->suiv ;
-		while (!courNoeud->estUnDepot || firstLoopDep)
+		courNoeud = R->depot->nextNode ;
+		while (!courNoeud->isDepot || firstLoopDep)
 		{
-			if (courNoeud->estUnDepot) firstLoopDep = false ;
+			if (courNoeud->isDepot) firstLoopDep = false ;
 
 			if (courNoeud->place < U->place)
 			{
-				myseqs.clear();
-				myseqs.push_back(courNoeud->pred->seq0_i);
-				myseqs.push_back(U->seq1);
-				addSeqDataInPieces(courNoeud,U->place-1-courNoeud->place,courNoeud->jour);
-				myseqs.push_back(U->suiv->seqi_n);
-				cost = seq->evaluation(myseqs,R->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(courNoeud->pred->seq0_i);
+				mySeqs.push_back(U->seq1);
+				addSeqDataInPieces(courNoeud,U->place-1-courNoeud->place,courNoeud->day);
+				mySeqs.push_back(U->nextNode->seqi_n);
+				cost = seq->evaluation(mySeqs, R->vehicle);
 			}
 			else if (courNoeud->place > U->place + 1)
 			{
-				myseqs.clear();
-				myseqs.push_back(U->pred->seq0_i);
-				addSeqDataInPieces(U->suiv,courNoeud->place-1-U->suiv->place,courNoeud->jour);
-				myseqs.push_back(U->seq1);
-				myseqs.push_back(courNoeud->seqi_n);
-				cost = seq->evaluation(myseqs,R->vehicle);
+				mySeqs.clear();
+				mySeqs.push_back(U->pred->seq0_i);
+				addSeqDataInPieces(U->nextNode, courNoeud->place - 1 - U->nextNode->place, courNoeud->day);
+				mySeqs.push_back(U->seq1);
+				mySeqs.push_back(courNoeud->seqi_n);
+				cost = seq->evaluation(mySeqs, R->vehicle);
 			}
 			else cost = 1.e30 ;
 
@@ -1420,9 +1420,9 @@ void LocalSearch::evalInsertClient (Route * R,Noeud * U,int pattern)
 				leastCost = cost ;
 				R->placeInsertionClient[U->cour][pattern] = courNoeud->pred ;
 			}
-			courNoeud = courNoeud->suiv ;
+			courNoeud = courNoeud->nextNode ;
 		}
-		R->coutInsertionClient[U->cour][pattern] = leastCost - seq->evaluation(U->pred->seq0_i,U->suiv->seqi_n,R->vehicle);
+		R->coutInsertionClient[U->cour][pattern] = leastCost - seq->evaluation(U->pred->seq0_i, U->nextNode->seqi_n, R->vehicle);
 	}
 
 	// PCARP, setting back the pre-processed demand to its correct value
@@ -1452,7 +1452,7 @@ void LocalSearch::updateMoves ()
             size = (int) params->cli[client].neighborsCloseBefore.size();
             for (int a1 = 0; a1 < size; a1++) {
                 client2 = params->cli[client].neighborsCloseBefore[a1];
-                if (client2 >= params->nbDepots && clients[k][client2].estPresent)
+                if (client2 >= params->nbDepots && clients[k][client2].isPresent)
                     clients[k][client].moves.push_back(client2);
             }
         }
@@ -1465,7 +1465,7 @@ void LocalSearch::setRouteVide(int day)
 	int route = 0 ;
 	while (routeVide[day] == NULL && route < params->nbVehiculesPerDep )
 	{
-		if (depots[day][route].suiv->estUnDepot) routeVide[day] = depots[day][route].route ;
+		if (depots[day][route].nextNode->isDepot) routeVide[day] = depots[day][route].route ;
 		route ++ ;
 	}
 }
@@ -1483,7 +1483,7 @@ void LocalSearch::placeManquants ()
 	pattern meilleurPattern ;
 	double depense, meilleureDepense ;
 	int indexMeilleur ;
-	Noeud * noeudTravail ;
+	Node * noeudTravail ;
 	int calcul1, calcul2 ;
 	pattern pattern1, pattern2 ;
 
@@ -1513,7 +1513,7 @@ void LocalSearch::placeManquants ()
 					if (calcul2 % 2 == 1)
 					{
 						noeudTravail = &clients[params->formerNbDays - kk + pattern2.dep * params->formerNbDays][k] ;
-						computeCoutInsertion(noeudTravail,pat) ;
+                        computeCostInsertion(noeudTravail, pat) ;
 						depense += noeudTravail->coutInsertion[pat] ;
 					}
 					calcul2 = calcul2/2 ;
@@ -1538,8 +1538,8 @@ void LocalSearch::placeManquants ()
 		{
 			if (calcul2 % 2 == 1 && calcul1 % 2 == 0)
 			{
-				Noeud * hereCli = &clients[params->formerNbDays - kk + meilleurPattern.dep * params->formerNbDays][k] ;
-				Noeud * thereCli = hereCli->placeInsertion[indexMeilleur] ;
+				Node * hereCli = &clients[params->formerNbDays - kk + meilleurPattern.dep * params->formerNbDays][k] ;
+				Node * thereCli = hereCli->placeInsertion[indexMeilleur] ;
 				addNoeud(hereCli,thereCli);
 			}
 			calcul1 = calcul1/2 ;
@@ -1548,67 +1548,67 @@ void LocalSearch::placeManquants ()
 	}
 }
 
-void LocalSearch::insertNoeud(Noeud * U, Noeud * V)
+void LocalSearch::insertNoeud(Node * U, Node * V)
 {
 	if (U->pred != V && U != V)
 	{
-		U->pred->suiv = U->suiv ;
-		U->suiv->pred = U->pred ;
-		V->suiv->pred = U ;
+		U->pred->nextNode = U->nextNode ;
+		U->nextNode->pred = U->pred ;
+		V->nextNode->pred = U ;
 		U->pred = V ;
-		U->suiv = V->suiv ;
-		V->suiv = U ;
+		U->nextNode = V->nextNode ;
+		V->nextNode = U ;
 		U->route = V->route ;
 	}
 }
 
-void LocalSearch::removeNoeud(Noeud * U)
+void LocalSearch::removeNoeud(Node * U)
 {
-	Noeud * temp =  U->suiv ;
+	Node * temp =  U->nextNode ;
 	reinitSingleDayMoves(U->route);
-	U->pred->suiv = U->suiv ;
-	U->suiv->pred = U->pred ;
+	U->pred->nextNode = U->nextNode ;
+	U->nextNode->pred = U->pred ;
 	U->route = NULL ;
 	U->pred = NULL ;
-	U->suiv = NULL ;
+	U->nextNode = NULL ;
 	temp->route->updateRouteData(false);
-	setRouteVide(U->jour);
+	setRouteVide(U->day);
 
 	// Managing the other data structures
-	individu->chromT[U->jour].pop_back();
-	removeOP(U->jour,U->cour);
-	U->estPresent = false ;
+	individu->chromT[U->day].pop_back();
+	removeOP(U->day, U->cour);
+	U->isPresent = false ;
 
 	// Say that the insertions on this day need to be computed again
 	temp->route->initiateInsertions();
 	for (int i= params->nbDepots ; i< params->nbDepots + params->nbClients ; i++)
 		for (int p=0 ; p < (int)params->cli[i].visits.size() ; p++)
-			clients[U->jour][i].coutInsertion[p] = 1.e30 ;
+			clients[U->day][i].coutInsertion[p] = 1.e30 ;
 }
 
-void LocalSearch::addNoeud(Noeud * U, Noeud * V)
+void LocalSearch::addNoeud(Node * U, Node * V)
 {
 	reinitSingleDayMoves(V->route);
-	V->suiv->pred = U ;
+	V->nextNode->pred = U ;
 	U->pred = V;
-	U->suiv = V->suiv ;
-	V->suiv = U ;
+	U->nextNode = V->nextNode ;
+	V->nextNode = U ;
 
 	// Update the routes
-	U->estPresent = true ;
+	U->isPresent = true ;
 	U->route = V->route ;
 	U->route->updateRouteData(false);
-	setRouteVide(U->jour);
+	setRouteVide(U->day);
 
 	// Manage the other data structures
-	individu->chromT[U->jour].push_back(0);
-	addOP(U->jour,U->cour);
+	individu->chromT[U->day].push_back(0);
+	addOP(U->day, U->cour);
 
 	// Say that the insertions on this day need to be computed again
 	U->route->initiateInsertions();
 	for (int i= params->nbDepots ; i< params->nbDepots + params->nbClients ; i++)
 		for (int p=0 ; p < (int)params->cli[i].visits.size() ; p++)
-			clients[U->jour][i].coutInsertion[p] = 1.e30 ;
+			clients[U->day][i].coutInsertion[p] = 1.e30 ;
 }
 
 void LocalSearch::removeOP (int day, int client) {
@@ -1634,8 +1634,8 @@ void LocalSearch::addOP (int day, int client) {
 void LocalSearch::controlRoutes ()
 {
 	bool tracesDebug = false; // set to true to activate traces
-	Noeud * myNoeud ;
-	Noeud * autreNoeud ;
+	Node * myNoeud ;
+	Node * autreNoeud ;
 	bool firstIt = true ;
 	for (int k=1 ; k<=params->nbDays ; k++)
 		for (int r=0 ; r < params->nombreVehicules[k] ; r++)
@@ -1644,11 +1644,11 @@ void LocalSearch::controlRoutes ()
 			if (tracesDebug) cout << "day(" << k << ") " << "route(" << r << ") // " ;
 			myNoeud = routes[k][r].depot ;
 			if (tracesDebug) cout << myNoeud->cour ;
-			while ( !myNoeud->estUnDepot || firstIt )
+			while (!myNoeud->isDepot || firstIt )
 			{
 				firstIt = false ;
 				autreNoeud = myNoeud ;
-				myNoeud = myNoeud->suiv ;
+				myNoeud = myNoeud->nextNode ;
 				if (tracesDebug) cout << " -> " << myNoeud->cour ;
 				if (autreNoeud != myNoeud->pred)
 					throw string (" !ERROR LINKS! ") ;
@@ -1665,9 +1665,9 @@ void LocalSearch::reinitSingleDayMoves(Route * r)
 	for (int i=0 ; i < params->nbClients + params->nbDepots ; i ++ )
 		r->nodeAndRouteTested[i] = false ;
 
-	for (Noeud * tempNoeud = r->depot->suiv ; !tempNoeud->estUnDepot ; tempNoeud = tempNoeud->suiv)
+	for (Node * tempNoeud = r->depot->nextNode ; !tempNoeud->isDepot ; tempNoeud = tempNoeud->nextNode)
 		for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
-			depots[tempNoeud->jour][route].route->nodeAndRouteTested[tempNoeud->cour] = false ;
+			depots[tempNoeud->day][route].route->nodeAndRouteTested[tempNoeud->cour] = false ;
 }
 
 void LocalSearch::reinitAllSingleDayMoves()
@@ -1688,14 +1688,14 @@ bool LocalSearch::ejectionChains (int day)
 	SeqData * seq = depots[day][0].seq0_i ;
 	int myNodeIndex ;
 	int myRouteIndex ;
-	Noeud * myNoeud ;
+	Node * myNoeud ;
 	Vehicle * myVehicle ;
-	Noeud * myDepot ;
+	Node * myDepot ;
 	double myPrevCost ;
 	double myDeltaCost ;
 
 	// 1) CHOOSE AN ORDER FOR THE BINS
-	vector < Noeud * > ordreBins ;
+	vector < Node * > ordreBins ;
 	for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
 		ordreBins.push_back(&depots[day][route]);
 	std::random_shuffle(ordreBins.begin(),ordreBins.end());
@@ -1706,23 +1706,23 @@ bool LocalSearch::ejectionChains (int day)
 	{
 		myNoeud = ordreBins[route] ;
 		// if the route is not empty, this makes a new layer in the ejection chains graph
-		if (!myNoeud->suiv->estUnDepot)
+		if (!myNoeud->nextNode->isDepot)
 		{
 			ejectionGraph[myRouteIndex][0].myNode = myNoeud ;
 			ejectionGraph[myRouteIndex][0].cost = 1.e20 ;
 			ejectionGraph[myRouteIndex][0].pred = NULL ;
 			ejectionGraph[myRouteIndex][0].nbCustNodesInChain = 0 ;
 			ejectionGraph[myRouteIndex][0].routeID = route ;
-			myNoeud = myNoeud->suiv ;
+			myNoeud = myNoeud->nextNode ;
 			myNodeIndex = 1 ;
-			while (!myNoeud->estUnDepot)
+			while (!myNoeud->isDepot)
 			{
 				ejectionGraph[myRouteIndex][myNodeIndex].myNode = myNoeud ;
 				ejectionGraph[myRouteIndex][myNodeIndex].cost = 1.e20 ;
 				ejectionGraph[myRouteIndex][myNodeIndex].pred = NULL ;
 				ejectionGraph[myRouteIndex][myNodeIndex].nbCustNodesInChain = 0 ;
 				ejectionGraph[myRouteIndex][myNodeIndex].routeID = route ;
-				myNoeud = myNoeud->suiv ;
+				myNoeud = myNoeud->nextNode ;
 				myNodeIndex ++ ;
 			}
 			ec_nbElements[myRouteIndex] = myNodeIndex ;
@@ -1765,7 +1765,7 @@ bool LocalSearch::ejectionChains (int day)
 				{
 					myDeltaCost = seq->evaluation(ejectionGraph[r][ii].myNode->seq0_i,
 						ejectionGraph[rPrev][iiPrev].myNode->seq1,
-						ejectionGraph[r][ii].myNode->suiv->seqi_n,
+						ejectionGraph[r][ii].myNode->nextNode->seqi_n,
 						myVehicle) - myPrevCost ; 
 					if (myDeltaCost + ejectionGraph[rPrev][iiPrev].cost < ejectionGraph[r][0].cost - 0.0001 || 
 						(myDeltaCost + ejectionGraph[rPrev][iiPrev].cost < ejectionGraph[r][0].cost + 0.0001 && ejectionGraph[rPrev][iiPrev].nbCustNodesInChain > ejectionGraph[r][0].nbCustNodesInChain))
@@ -1783,7 +1783,7 @@ bool LocalSearch::ejectionChains (int day)
 		{
 			// for each customer node in the bin, propagate from the general 0 node
 			myDeltaCost = seq->evaluation(ejectionGraph[r][ii].myNode->pred->seq0_i,
-				ejectionGraph[r][ii].myNode->suiv->seqi_n,
+				ejectionGraph[r][ii].myNode->nextNode->seqi_n,
 				myVehicle) - myPrevCost ;
 			if (myDeltaCost < ejectionGraph[r][ii].cost - 0.0001)
 			{
@@ -1813,7 +1813,7 @@ bool LocalSearch::ejectionChains (int day)
 				{
 					myDeltaCost = seq->evaluation(ejectionGraph[r][ii].myNode->pred->seq0_i,
 						ejectionGraph[rPrev][iiPrev].myNode->seq1,
-						ejectionGraph[r][ii].myNode->suiv->seqi_n,
+						ejectionGraph[r][ii].myNode->nextNode->seqi_n,
 						myVehicle) - myPrevCost ;
 
 					if (myDeltaCost + ejectionGraph[rPrev][iiPrev].cost < ejectionGraph[r][ii].cost - 0.0001 ||
@@ -1848,14 +1848,14 @@ bool LocalSearch::ejectionChains (int day)
 			nbEjectionChainsNodes += orderEnds[myID]->nbCustNodesInChain ;
 			elementCour = orderEnds[myID];
 			elementPred = elementCour->pred ;
-			Noeud * insertionPosition ;
-			Noeud * insertionPositionTemp ;
+			Node * insertionPosition ;
+			Node * insertionPositionTemp ;
 			while (elementCour != NULL)
 			{
-				if (!(elementPred == NULL || elementPred->myNode->estUnDepot)) 
+				if (!(elementPred == NULL || elementPred->myNode->isDepot))
 				{
 					//before is a node, after is a depot (insert in the best location, and keep track of where he was.)
-					if (elementCour->myNode->estUnDepot)
+					if (elementCour->myNode->isDepot)
 					{
 						insertionPosition = elementPred->myNode->pred ;		
 						insertNoeud(elementPred->myNode,elementCour->bestInsertionPlace);
@@ -1886,9 +1886,9 @@ bool LocalSearch::ejectionChains (int day)
 		return false ;
 }
 
-void LocalSearch::addSeqDataInPieces (Noeud * node, int length, int day)
+void LocalSearch::addSeqDataInPieces (Node * node, int length, int day)
 {
-	Noeud * cour = node ;
+	Node * cour = node ;
 	SeqData * courSeq ;
 	int courLenght = length + 1 ;
 	int temp ;
@@ -1896,15 +1896,15 @@ void LocalSearch::addSeqDataInPieces (Noeud * node, int length, int day)
 	{
 		temp = min(courLenght,params->sizeSD) ;
 		courSeq = cour->seqi_j[temp-1];
-		myseqs.push_back(courSeq);
+		mySeqs.push_back(courSeq);
 		courLenght -= temp ;
-		if (courLenght != 0) cour = clients[day][courSeq->lastNode].suiv ;
+		if (courLenght != 0) cour = clients[day][courSeq->lastNode].nextNode ;
 	}
 }
 
-void LocalSearch::addReverseSeqDataInPieces (Noeud * node, int length, int day)
+void LocalSearch::addReverseSeqDataInPieces (Node * node, int length, int day)
 {
-	Noeud * cour = node ;
+	Node * cour = node ;
 	SeqData * courSeq ;
 	list <SeqData*> myseqTemp ;
 	int courLenght = length + 1 ;
@@ -1915,11 +1915,11 @@ void LocalSearch::addReverseSeqDataInPieces (Noeud * node, int length, int day)
 		courSeq = cour->seqj_i[temp-1];
 		myseqTemp.push_back(courSeq);
 		courLenght -= temp ;
-		if (courLenght != 0) cour = clients[day][courSeq->firstNode].suiv ;
+		if (courLenght != 0) cour = clients[day][courSeq->firstNode].nextNode ;
 	}
 
 	for ( list<SeqData*>::reverse_iterator it=myseqTemp.rbegin() ; it != myseqTemp.rend() ; it++)
-		myseqs.push_back(*it);
+		mySeqs.push_back(*it);
 }
 
 LocalSearch::LocalSearch(void)
@@ -1942,29 +1942,29 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 	seqdeb = NULL ;
 	nbTotalRISinceBeginning = 0 ;
 	nbTotalPISinceBeginning = 0 ;
-	vector < Noeud * > tempNoeud ;
+	vector < Node * > tempNoeud ;
 	vector <int> temp2 ;
 
-	clients = new Noeud * [params->nbDays+1] ;
-	depots = new Noeud * [params->nbDays+1] ;
-	depotsFin = new Noeud * [params->nbDays+1] ;
+	clients = new Node * [params->nbDays + 1] ;
+	depots = new Node * [params->nbDays + 1] ;
+	depotsFin = new Node * [params->nbDays + 1] ;
 	routes = new Route * [params->nbDays+1] ;
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
 		nbVeh = params->nombreVehicules[kk] ;
-		clients[kk] = new Noeud [params->nbClients + params->nbDepots + 1] ;
-		depots[kk] = new Noeud [nbVeh] ;
-		depotsFin[kk] = new Noeud [nbVeh] ;
+		clients[kk] = new Node [params->nbClients + params->nbDepots + 1] ;
+		depots[kk] = new Node [nbVeh] ;
+		depotsFin[kk] = new Node [nbVeh] ;
 		routes[kk] = new Route [nbVeh] ; 
 
 		for (int i = 0 ; i <  params->nbClients + params->nbDepots ; i ++ )
-			clients[kk][i] = Noeud(false,i,kk,false,NULL,NULL,NULL,params);
+			clients[kk][i] = Node(false, i, kk, false, NULL, NULL, NULL, params);
 
 		for (int i = 0 ; i < nbVeh ; i++ )
 		{
-			depots[kk][i] = Noeud(true,params->ordreVehicules[kk][i].depotNumber,kk,false,NULL,NULL,NULL,params);
-			depotsFin[kk][i] = Noeud(true,params->ordreVehicules[kk][i].depotNumber,kk,false,NULL,NULL,NULL,params);
+			depots[kk][i] = Node(true, params->ordreVehicules[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
+			depotsFin[kk][i] = Node(true, params->ordreVehicules[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
 			routes[kk][i] = Route(i,0,&params->ordreVehicules[kk][i],params,individu,kk);
 			depots[kk][i].route = &routes[kk][i] ;
 			depotsFin[kk][i].route = &routes[kk][i] ;

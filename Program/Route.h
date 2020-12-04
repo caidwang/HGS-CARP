@@ -21,12 +21,12 @@
 
 #include "Params.h"
 #include "SeqData.h"
-#include "Noeud.h"
+#include "Node.h"
 #include <stdlib.h>
 #include <iostream>
 #include <vector>
 #include <math.h>
-class Noeud ;
+class Node ;
 using namespace std ;
 
 class Route
@@ -49,7 +49,7 @@ int cour ;
 int day ;
 
 // Depot node associated to the route
-Noeud * depot ;
+Node * depot ;
 
 // Vehicle associated to the route
 Vehicle * vehicle ;
@@ -74,7 +74,7 @@ vector < vector <double> > coutInsertionClient ;
 
 // placeInsertionClient[i][p] stores the best place of insertion of client [i] with pattern [p] in this route
 // The pattern information is due to the CARP specificity
-vector < vector <Noeud *> > placeInsertionClient ;
+vector < vector <Node *> > placeInsertionClient ;
 
 // For each node, a bool saying if all moves involving this node and route have been tested without success
 vector <bool> nodeAndRouteTested ;
@@ -87,7 +87,7 @@ void testSeqDatas();
 
 Route(void);
 
-Route(int cour, Noeud * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day);
+Route(int cour, Node * depot, Vehicle * vehicle, Params * params, Individual * indiv, int day);
 
 ~Route(void);
 };

@@ -17,8 +17,8 @@ add_executable(HGS_CARP
         Program/LocalSearch.cpp
         Program/LocalSearch.h
         Program/main.cpp
-        Program/Noeud.cpp
-        Program/Noeud.h
+        Program/Node.cpp
+        Program/Node.h
         Program/Params.cpp
         Program/Params.h
         Program/Population.cpp

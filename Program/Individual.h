@@ -22,7 +22,7 @@
 #include <vector>
 #include <list>
 #include <iostream> 
-#include "Noeud.h"
+#include "Node.h"
 #include "Params.h"
 #include "LocalSearch.h"
 using namespace std ;

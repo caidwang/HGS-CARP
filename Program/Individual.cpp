@@ -437,9 +437,9 @@ void Individual::updateLS()
 	// Warning, Split must have been computed before
 	int depot ;
 	int i,j ;
-	Noeud * myDepot ;
-	Noeud * myDepotFin ;
-	Noeud * myClient ;
+	Node * myDepot ;
+	Node * myDepotFin ;
+	Node * myClient ;
 	Route * myRoute ;
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
@@ -447,10 +447,10 @@ void Individual::updateLS()
         // we reinitialize the "routeOrder" vector
         localSearch->routeOrder[kk].clear();
 
-        // we reset the "estPresent" values to false
-        // estPresent 当前客户节点 今天是否被服务
+        // we reset the "isPresent" values to false
+        // isPresent 当前客户节点 今天是否被服务
         for (i = params->nbDepots; i < params->nbClients + params->nbDepots; i++)
-            localSearch->clients[kk][i].estPresent = false;
+            localSearch->clients[kk][i].isPresent = false;
 
         // using Split results to load the solution in the LS structure
         j = (int) chromT[kk].size();
@@ -465,20 +465,20 @@ void Individual::updateLS()
 			myDepotFin = &localSearch->depotsFin[kk][params->nombreVehicules[kk] - jj - 1];
 			myRoute = &localSearch->routes[kk][params->nombreVehicules[kk] - jj - 1];
 
-			myDepot->suiv = myDepotFin ;
+			myDepot->nextNode = myDepotFin ;
 			myDepot->pred = myDepotFin ;
-			myDepotFin->suiv = myDepot ;
+			myDepotFin->nextNode = myDepot ;
 			myDepotFin->pred = myDepot ;
 
 			// a single visit
 			if ( j == i+1 ) {
                 myClient = &localSearch->clients[kk][chromT[kk][i]];
                 myClient->pred = myDepot;
-                myClient->suiv = myDepotFin;
+                myClient->nextNode = myDepotFin;
                 myClient->route = myRoute;
-                myClient->estPresent = true;
+                myClient->isPresent = true;
                 localSearch->nodeTestedForEachRoute(myClient->cour, kk);
-                myDepot->suiv = myClient;
+                myDepot->nextNode = myClient;
                 myDepotFin->pred = myClient;
                 localSearch->routeOrder[kk].push_back(myClient->cour);
             }
@@ -486,19 +486,19 @@ void Individual::updateLS()
                 // at least two visits
                 myClient = &localSearch->clients[kk][chromT[kk][i]];
                 myClient->pred = myDepot;
-                myClient->suiv = &localSearch->clients[kk][chromT[kk][i + 1]];
+                myClient->nextNode = &localSearch->clients[kk][chromT[kk][i + 1]];
                 myClient->route = myRoute;
-                myClient->estPresent = true;
+                myClient->isPresent = true;
                 localSearch->nodeTestedForEachRoute(myClient->cour, kk);
-                myDepot->suiv = myClient;
+                myDepot->nextNode = myClient;
                 localSearch->routeOrder[kk].push_back(myClient->cour);
 
                 // information for the end of the route
                 myClient = &localSearch->clients[kk][chromT[kk][j - 1]];
                 myClient->pred = &localSearch->clients[kk][chromT[kk][j - 2]];
-                myClient->suiv = myDepotFin;
+                myClient->nextNode = myDepotFin;
                 myClient->route = myRoute;
-                myClient->estPresent = true;
+                myClient->isPresent = true;
                 localSearch->nodeTestedForEachRoute(myClient->cour, kk);
                 myDepotFin->pred = myClient;
                 localSearch->routeOrder[kk].push_back(myClient->cour);
@@ -507,9 +507,9 @@ void Individual::updateLS()
                 for (int k = (int) i + 1; k <= j - 2; k++) {
                     myClient = &localSearch->clients[kk][chromT[kk][k]];
                     myClient->pred = &localSearch->clients[kk][chromT[kk][k - 1]];
-                    myClient->suiv = &localSearch->clients[kk][chromT[kk][k + 1]];
+                    myClient->nextNode = &localSearch->clients[kk][chromT[kk][k + 1]];
                     myClient->route = myRoute;
-                    myClient->estPresent = true;
+                    myClient->isPresent = true;
                     localSearch->nodeTestedForEachRoute(myClient->cour, kk);
                     localSearch->routeOrder[kk].push_back(myClient->cour);
                 }
@@ -532,7 +532,7 @@ void Individual::updateIndiv()
 	// Now, we go through the LS structure to update the individual (its chromosomes)
 	int pos ; 
 	vector < Route * > ordreRoutes ;
-	Noeud * node ;
+	Node * node ;
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
@@ -543,11 +543,11 @@ void Individual::updateIndiv()
 		pos = 0 ;
 		for (int r=0 ; r < (int)ordreRoutes.size() ; r ++)
 		{
-			node = ordreRoutes[r]->depot->suiv ;
-			while (!node->estUnDepot)
+			node = ordreRoutes[r]->depot->nextNode ;
+			while (!node->isDepot)
 			{
 				chromT[kk][pos]= node->cour;
-				node = node->suiv ;
+				node = node->nextNode ;
 				pos ++ ;
 			}
 		}
