@@ -69,7 +69,7 @@ private:
 	int nbDays ;
 
 	// pointer towards the first entry of the auxiliary data structures on nodes
-	SeqData * seqdeb ;
+	SeqData * seqStart ;
 
 	// Is the search finished
 	bool researchCompleted ;
@@ -77,6 +77,7 @@ private:
 	// Access to the associated individual
 	Individual * individu ;
 
+	// U,V和x,y分别的用途 U->x, V->y
 	// Small pointers and variables which are used during the LS
 	Node * nodeU ;
 	Node * nodeUPred ;
@@ -103,10 +104,10 @@ private:
 	void updateMoves ();
 
 	// little table which is used to sum up the costs of the moves
-	vector < vector < double > > resultMoves ;
+	vector < vector < double > > resultMoves ; // [4][4]
 
 	// used during moves preprocessing, using the lower bounds
-	vector < vector < bool > > shouldBeTested ;
+	vector < vector < bool > > shouldBeTested ;// [4][4]
 
 	// say that some moves need to be tested again
 	void reinitSingleDayMoves(Route * r);
@@ -132,7 +133,15 @@ public:
 
     // little data structure to choose the order of the exploration of the moves.
     // updated to contain only the visits in their respective days (PVRP and PCARP), and regularly shuffled
-    vector<vector<int> > routeOrder;
+    /*
+     * 在updateLS中， 这个结构第i天被处理成以下形式，假设，当天的路径经过的客户节点如下
+     * d -> 1 -> 2 -> d
+     * d -> 4 -> 5 -> 3 -> d
+     * d -> 6 -> 9 -> 8 -> 7 -> d
+     * 该结构中记录的顺序是从最后一个路径开始添加，并且添加的顺序是，首尾然后是中间，
+     * 6，7，9，8，4，3，5，1，2
+     */
+    vector<vector<int> > routeOrder; // [nbDay][nbClient]
 
     void addOP(int day, int client); // functions for updating the routeOrder data structure
     void removeOP(int day, int client); // functions for updating the routeOrder data structure
@@ -145,18 +154,20 @@ public:
     int nbEjectionChains;
     int nbEjectionChainsNodes;
 
-    // for each day, keeping a pointer routeVide[day] on the first empty route (to avoid iterating many identical empty routes)
+    // for each day, keeping a pointer routeEmpty[day] on the first empty route (to avoid iterating many identical empty routes)
 	// initially set to NULL
-	vector < Route * > routeVide ;
+	vector < Route * > routeEmpty ; // [nbDay]  这个结构好像没有用。。。？
 	// setting the pointer for a given day
-	void setRouteVide(int day);
+	void setRouteEmpty(int day);
 
+	// 双向循环链表
 	// Linked list of the customer (used to store the solution)
 	// there is a pointer for the successor and the predecessor, as well as for the route and pre-processed data structures
-	Node ** clients ; // Elements representing the customers
-	Node ** depots ; // Elements representing the depots
-	Node ** depotsFin ; // Sentinels at the end of the routes
-	Route ** routes ; // Elements representing the routes
+	// clients[day]是Node的列表，保存了所有客户节点的副本，通过isPresent表示是否在当天需要被服务，通过node中的前后节点属性，连接同一条路径的前后节点
+	Node ** clients ; // Elements representing the customers [nbDays][nbClient+nbDepots+1]
+	Node ** depots ; // Elements representing the depots [nbDays][nbVeh]
+	Node ** depotsFin ; // Sentinels at the end of the routes [nbDays][nbVeh]
+	Route ** routes ; // Elements representing the routes [nbDays][nbVeh]
 
 	// running the complete local search (RI-PI-RI)
 	void runSearchTotal ();
@@ -192,7 +203,7 @@ public:
 	inline void addReverseSeqDataInPieces (Node * node, int length, int day); // the same with the reverse sequence. For 2-opt moves.
 
 	/* PROCEDURE OF INSERTION OF THE MISSING NODES IN THE PIX CROSSOVER */
-	void placeManquants ();
+	void placeMissing ();
 
 	/* USED FOR DEBUGGING */
 	void controlRoutes ();

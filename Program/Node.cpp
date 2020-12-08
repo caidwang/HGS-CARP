@@ -20,16 +20,17 @@
 
 Node::Node(void) {}
 
-Node::Node(bool estUnDepot, int cour, int jour, bool estPresent, Node * suiv , Node * pred, Route * route, Params * params)
-: estUnDepot(estUnDepot),cour(cour),jour(jour), estPresent(estPresent),suiv(suiv), pred(pred), route(route),params(params)
+Node::Node(bool isDepot, int cour, int day, bool isPresent, Node * nextNode , Node * pred, Route * route, Params * params)
+: isDepot(isDepot),cour(cour),day(day), isPresent(isPresent),nextNode(nextNode), pred(pred), route(route),params(params)
 {
 	int ccour = cour ;
-	if (estUnDepot) ccour = 0 ;
+	if (isDepot) ccour = 0 ;
 
-	// Initialization of the coutInsertion structure
+	// Initialization of the costInsertion structure
 	for (int i=0 ; i < params->cli[ccour].visits.size() ; i++)
 	{
-		coutInsertion.push_back(1.e30) ;
+	    // 对于每种访问pattern，增加一个，如果是CARP，则只有一个pattern
+		costInsertion.push_back(1.e30) ;
 		placeInsertion.push_back(NULL) ;
 	}
 	place = -1 ;
@@ -38,16 +39,16 @@ Node::Node(bool estUnDepot, int cour, int jour, bool estPresent, Node * suiv , N
 Node::Node(Node const& copy)
 {
 	// Copy constructor
-	estUnDepot = copy.estUnDepot ;
+	isDepot = copy.isDepot ;
 	cour = copy.cour ;
 	place = copy.place ;
-	jour = copy.jour ;
-	estPresent = copy.estPresent ;
-	suiv = copy.suiv ;
+	day = copy.day ;
+	isPresent = copy.isPresent ;
+	nextNode = copy.nextNode ;
 	pred = copy.pred ;
 	route = copy.route ;
 	params = copy.params ;
-	coutInsertion = copy.coutInsertion ;
+    costInsertion = copy.costInsertion ;
 	placeInsertion = copy.placeInsertion ;
 	moves = copy.moves ;
 }
@@ -55,16 +56,16 @@ Node::Node(Node const& copy)
 Node& Node::operator=(Node const& copy)
 {
 	// Copy constructor
-	estUnDepot = copy.estUnDepot ;
+	isDepot = copy.isDepot ;
 	cour = copy.cour ;
 	place = copy.place ;
-	jour = copy.jour ;
-	estPresent = copy.estPresent ;
-	suiv = copy.suiv ;
+	day = copy.day ;
+	isPresent = copy.isPresent ;
+	nextNode = copy.nextNode ;
 	pred = copy.pred ;
 	route = copy.route ;
 	params = copy.params ;
-	coutInsertion = copy.coutInsertion ;
+    costInsertion = copy.costInsertion ;
 	placeInsertion = copy.placeInsertion ;
 	moves = copy.moves ;
 	return *this;

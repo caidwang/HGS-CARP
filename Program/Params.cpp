@@ -39,7 +39,7 @@ void Params::setMethodParams()
 	{ mu = 5 ; lambda = 5 ; el = 1 ; minValides = 0.6 ; maxValides = 0.7 ; }
 }
 
-void Params::preleveDonnees (string nomInstance)
+void Params::collectData (string nomInstance)
 {
 	// Main method to read a problem instance
 	vector <Vehicle> tempI ;
@@ -71,11 +71,11 @@ void Params::preleveDonnees (string nomInstance)
 		fichier >> ar_EdgesNonRequired ;
 		fichier >> useless2 ;
 		fichier >> useless2 ;
-		fichier >> nbVehiculesPerDep ;
+		fichier >> nbVehiclesPerDepot ;
 
 		// The instance only provides a lower bound on the necessary number of vehicles, per definition of the CARP, more vehicles are allowed (here we put one more)
 		// Still, in all solutions the minimum number of vehicles turned out to be used
-		nbVehiculesPerDep ++ ; 
+		nbVehiclesPerDepot ++ ;
 		fichier >> useless2 ;
 		fichier >> useless2 ;
 		fichier >> vc ;
@@ -101,8 +101,8 @@ void Params::preleveDonnees (string nomInstance)
 
 		// If the number of vehicles per depot has been specified in the commandline
 		// Otherwise we read it from the file (not always available, depending on the benchmark set)
-		if (nbVehiculesPerDep == -1)
-			fichier >> nbVehiculesPerDep ;
+		if (nbVehiclesPerDepot == -1)
+			fichier >> nbVehiclesPerDepot ;
 		else 
 			fichier >> useless2 ;
 
@@ -146,8 +146,8 @@ void Params::preleveDonnees (string nomInstance)
 		fichier >> ar_EdgesRequired ;
 		fichier.getline(myChars,1000,'=');
 		fichier.getline(myChars,1000,'=');
-		if (nbVehiculesPerDep == -1) // Getting the number of vehicles per depot (in case was not specific in commandline)
-			fichier >> nbVehiculesPerDep ;
+		if (nbVehiclesPerDepot == -1) // Getting the number of vehicles per depot (in case was not specific in commandline)
+			fichier >> nbVehiclesPerDepot ;
 		fichier.getline(myChars,1000,'=');
 		fichier >> vc ;
 		getline(fichier, contenu);
@@ -168,7 +168,7 @@ void Params::preleveDonnees (string nomInstance)
 
 		getline(fichier, contenu);
 		fichier >> useless2 ;
-		fichier >> nbVehiculesPerDep ;
+		fichier >> nbVehiclesPerDepot ;
 		fichier >> useless2 ;
 		fichier >> vc ;
 		fichier >> useless2 ;
@@ -243,7 +243,7 @@ void Params::preleveDonnees (string nomInstance)
 	nbClients = ar_ArcsRequired + ar_EdgesRequired + ar_NodesRequired ;
 
 	// Printing some warning in case of wrong use of the instances and parameters
-	if (nbVehiculesPerDep == -1) throw string ("WARNING : some type of instances do not specify a fleet size, please specify an upper bound manually using -veh XX in the commandline");
+	if (nbVehiclesPerDepot == -1) throw string ("WARNING : some type of instances do not specify a fleet size, please specify an upper bound manually using -veh XX in the commandline");
 	#ifdef TURN_PENALTIES
 	if (type != 34) throw string("When solving problem instances without turn penalties, please set the flag TURN_PENALTIES to false");
 	#else
@@ -256,19 +256,19 @@ void Params::preleveDonnees (string nomInstance)
 		throw string("ERROR WHEN READING : Number of services has not been correctly read. A very likely cause is the use of the wrong problem type for a given problem instance");
 
 	// Building the list of vehicles
-	ordreVehicules.push_back(tempI) ;
-	nombreVehicules.push_back(0);
+	orderVehicles.push_back(tempI) ;
+	numberVehicle.push_back(0);
 	dayCapacity.push_back(0);
 	for (int kk=1 ; kk <= nbDays; kk ++)
 	{
-		ordreVehicules.push_back(tempI) ;
+		orderVehicles.push_back(tempI) ;
 		dayCapacity.push_back(0);
-		nombreVehicules.push_back(nbDepots*nbVehiculesPerDep);
+		numberVehicle.push_back(nbDepots * nbVehiclesPerDepot);
 		for (int i=0 ; i < nbDepots ; i++)
 		{
-			for (int j=0 ; j < nbVehiculesPerDep ; j++)
+			for (int j=0 ; j < nbVehiclesPerDepot ; j++)
 			{
-				ordreVehicules[kk].push_back(Vehicle(i,1000000,vc)); // Duration constraint set to a high value
+				orderVehicles[kk].push_back(Vehicle(i, 1000000, vc)); // Duration constraint set to a high value
 				dayCapacity[kk] += vc ;
 			}
 		}
@@ -327,7 +327,7 @@ void Params::calculeStructures ()
 
 	for (int i=0 ; i < nbClients + nbDepots ; i++)
 	{
-		cli[i].sommetsVoisins.clear();
+		cli[i].neighborsClose.clear();
 		cli[i].neighborsCloseBefore.clear();
 	}
 
@@ -348,7 +348,7 @@ void Params::calculeStructures ()
 		for (int j=0 ; j < min(nbClients,granularity) ; j++)
 		{
 			cli[i].neighborsCloseBefore.push_back(myVector[j].myInt);
-			cli[myVector[j].myInt].sommetsVoisins.push_back(i);
+			cli[myVector[j].myInt].neighborsClose.push_back(i);
 			isCorrelated[myVector[j].myInt][i] = true ;
 		}
 	}
@@ -586,7 +586,7 @@ void Params::setPatterns_PCARP(Client * myCli)
 	}
 }
 
-Params::Params(string nomInstance, string nomSolution, string nomBKS, int seedRNG, int type, int nbVeh, int nbDep, bool isSearchingFeasible):type(type), nbVehiculesPerDep(nbVeh), nbDepots(nbDep), isSearchingFeasible(isSearchingFeasible)
+Params::Params(string nomInstance, string nomSolution, string nomBKS, int seedRNG, int type, int nbVeh, int nbDep, bool isSearchingFeasible): type(type), nbVehiclesPerDepot(nbVeh), nbDepots(nbDep), isSearchingFeasible(isSearchingFeasible)
 {
 	// Main constructor of Params
 	pathToInstance = nomInstance ;
@@ -606,7 +606,7 @@ Params::Params(string nomInstance, string nomSolution, string nomBKS, int seedRN
 
 	// Reading the instance file
 	if (fichier.is_open())
-		preleveDonnees (nomInstance);
+        collectData(nomInstance);
 	else 
 		throw string(" Impossible to find instance file ");
 
@@ -634,11 +634,11 @@ void Params::shuffleClose() {
 
     // Shuffling the list of close customers for each customer
     for (int i = nbDepots; i < nbClients + nbDepots; i++) {
-        for (int a1 = 0; a1 < (int) cli[i].sommetsVoisins.size() - 1; a1++) {
-            temp2 = a1 + rand() % ((int) cli[i].sommetsVoisins.size() - a1);
-            temp = cli[i].sommetsVoisins[a1];
-			cli[i].sommetsVoisins[a1] = cli[i].sommetsVoisins[temp2];
-			cli[i].sommetsVoisins[temp2] = temp ;
+        for (int a1 = 0; a1 < (int) cli[i].neighborsClose.size() - 1; a1++) {
+            temp2 = a1 + rand() % ((int) cli[i].neighborsClose.size() - a1);
+            temp = cli[i].neighborsClose[a1];
+			cli[i].neighborsClose[a1] = cli[i].neighborsClose[temp2];
+			cli[i].neighborsClose[temp2] = temp ;
 		}
 	}
 
@@ -1115,23 +1115,23 @@ void Params::processDataStructuresMD ()
 	// --> j1a - j2a - j3a - j1b - j2b - j3b - j1c - j2c - j3c
 	nbDays = nbDays*nbDepots ;
 
-	ordreVehiculesAncien = ordreVehicules ;
-	ordreVehicules.clear();
-	nombreVehicules.clear();
+	ordreVehiculesAncien = orderVehicles ;
+	orderVehicles.clear();
+	numberVehicle.clear();
 	dayCapacity.clear();
 
-	ordreVehicules.push_back(temp);
-	nombreVehicules.push_back(0);
+	orderVehicles.push_back(temp);
+	numberVehicle.push_back(0);
 	dayCapacity.push_back(0);
 	for (int k=1 ; k <= nbDays ; k++ )
 	{
-		ordreVehicules.push_back(temp);
-		nombreVehicules.push_back(nbVehiculesPerDep) ;
+		orderVehicles.push_back(temp);
+		numberVehicle.push_back(nbVehiclesPerDepot) ;
 		dayCapacity.push_back(0);
-		for (int d=0 ; d<nbVehiculesPerDep ; d++ )
+		for (int d=0 ; d < nbVehiclesPerDepot ; d++ )
 		{
-			ordreVehicules[k].push_back(ordreVehiculesAncien[(k-1) % formerNbDays + 1 ] [((k - 1) / formerNbDays) * nbVehiculesPerDep + d ]);
-			dayCapacity[k] += ordreVehicules[k][d].vehicleCapacity ;
+			orderVehicles[k].push_back(ordreVehiculesAncien[(k - 1) % formerNbDays + 1 ] [((k - 1) / formerNbDays) * nbVehiclesPerDepot + d ]);
+			dayCapacity[k] += orderVehicles[k][d].vehicleCapacity ;
 		}
 	}
 

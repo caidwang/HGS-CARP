@@ -448,8 +448,8 @@ void Population::ExportBest (string filename)
 		// Writing the number of routes
 		if (params->periodique)
 		{
-			cout << " | nbRoutes : " << params->nbVehiculesPerDep ;
-			myfile << params->nbVehiculesPerDep << endl ;
+			cout << " | nbRoutes : " << params->nbVehiclesPerDepot ;
+			myfile << params->nbVehiclesPerDepot << endl ;
 		}
 		else
 		{
@@ -473,7 +473,7 @@ void Population::ExportBest (string filename)
 			compteur = 1 ;
 			allRoutes.push_back(vector < vector <int> > ());
 			allRoutesArcs.push_back(vector < vector <pair<int,int> > > ()) ;
-			for (int i=0 ; i < params->nombreVehicules[k] ; i++)
+			for (int i=0 ; i < params->numberVehicle[k] ; i++)
 			{	
 				// Test if the route is empty
 				if (!loc->routes[k][i].depot->nextNode->isDepot)
@@ -613,7 +613,7 @@ bool Population::solutionChecker(vector < vector < vector < int > > > & allRoute
 				return false ;
 			}
 
-			else if (totalLoad > params->ordreVehicules[d][r].vehicleCapacity + 0.0001)
+			else if (totalLoad > params->orderVehicles[d][r].vehicleCapacity + 0.0001)
 			{
 				cout << "SOLUTION CHECKER: Violation of load constraint" << endl ;
 				return false ;

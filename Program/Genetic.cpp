@@ -50,7 +50,7 @@ void Genetic::evolveHGA (int maxIterNonProd, int nbRec)
     offspring->localSearch->nbTotalRISinceBeginning = 0 ;
     offspring->localSearch->nbTotalPISinceBeginning = 0 ;
 
-	cout << "| Start of GA | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiculesPerDep << " | " << endl ;
+	cout << "| Start of GA | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiclesPerDepot << " | " << endl ;
 
 	while (nbIterNonProd < maxIterNonProd && (clock() - start <= ticks) && (!params->isSearchingFeasible || population->getIndividuBestValide() == NULL))
 	{
@@ -154,7 +154,7 @@ void Genetic::evolveILS ()
 	clock_t debut = clock();
     offspringBestFoundAll->costSol.evaluation = 1.e30 ;
 
-	cout << "| Debut evolution ILS | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiculesPerDep << " | " << endl ;
+	cout << "| Debut evolution ILS | NbNodes : " << params->nbClients << " | NbVehicles : " << params->nbVehiclesPerDepot << " | " << endl ;
 
 	for (int phaseGrasp = 0 ; phaseGrasp < nbGRASP ; phaseGrasp ++)
 	{
@@ -471,7 +471,7 @@ int Genetic::crossPIX ()
 	// We call Split to obtain a full solution
 	offspring->generalSplit();
 	offspring->updateLS();
-	offspring->localSearch->placeManquants(); // and we perform a least-cost insertion of the missing visits
+    offspring->localSearch->placeMissing(); // and we perform a least-cost insertion of the missing visits
 	offspring->updateIndiv();
 
 	return 0 ;

@@ -37,7 +37,7 @@ Individual::Individual(Params * params, bool createAllStructures) : params(param
 	{
 		chromT.push_back(tempVect);
 		chromR.push_back(tempVect);
-		for (int j = 0 ; j < params->nombreVehicules[i] ; j++ )
+		for (int j = 0 ; j < params->numberVehicle[i] ; j++ )
 			chromR[i].push_back(-1);
 	}
 
@@ -103,7 +103,7 @@ Individual::Individual(Params * params, bool createAllStructures) : params(param
 		for (int k = 0 ; k <= params->nbDays ; k++)
 		{
 			pred.push_back(tempVect2);
-			for (int i = 0 ; i < params->nombreVehicules[k] + 1; i++)
+			for (int i = 0 ; i < params->numberVehicle[k] + 1; i++)
 			{
 				pred[k].push_back(tempVect);
 				pred[k][i].push_back(0);
@@ -117,8 +117,8 @@ Individual::Individual(Params * params, bool createAllStructures) : params(param
 		csol.evaluation = 1.e30 ;
 
 		for (int k = 0 ; k <= params->nbDays ; k++)
-			if (params->nombreVehicules[k] > maxDepots)
-				maxDepots = params->nombreVehicules[k] ;
+			if (params->numberVehicle[k] > maxDepots)
+				maxDepots = params->numberVehicle[k] ;
 
 		for (int i = 0 ; i < maxDepots + 1 ; i++)
 		{
@@ -230,7 +230,7 @@ void Individual::generalSplit()
 int Individual::splitSimple(int k)
 {
 	// We will only use the line "0" of the potential and pred data structures
-	myseq->initialisation(params->ordreVehicules[k][0].depotNumber,params,this,k,false);
+	myseq->initialisation(params->orderVehicles[k][0].depotNumber, params, this, k, false);
 	double cost, mydist,mytminex,myloadex;
 	int j ;
 
@@ -238,14 +238,14 @@ int Individual::splitSimple(int k)
 	for (int i=0 ; i < (int)chromT[k].size() ; i++ )
 	{
 		// Compute a route with a single visit
-		seq[i]->initialisation(params->ordreVehicules[k][0].depotNumber,params,this,k,false);
+		seq[i]->initialisation(params->orderVehicles[k][0].depotNumber, params, this, k, false);
 		j = i ;
-		while (j < (int)chromT[k].size() && seq[j]->load <= params->ordreVehicules[k][0].vehicleCapacity*params->borne )
+		while (j < (int)chromT[k].size() && seq[j]->load <= params->orderVehicles[k][0].vehicleCapacity * params->borne )
 		{
 			// Extend this route to the next visit
 			// 这里不会随着i增加被累加， 每次下一个等于前一个seq加上vour，第i个seq永远是0->0，因此可以被重置
 			seq[j+1]->concatOneAfter(seq[j],chromT[k][j],this,k);
-			cost = seq[0]->evaluation(seq[j+1],myseq,&params->ordreVehicules[k][0],mydist,mytminex,myloadex); // and evaluate
+			cost = seq[0]->evaluation(seq[j+1], myseq, &params->orderVehicles[k][0], mydist, mytminex, myloadex); // and evaluate
 
 			// Test if this label is better
 			if (potentials[0][i].evaluation + cost < potentials[0][j + 1].evaluation )
@@ -264,10 +264,10 @@ int Individual::splitSimple(int k)
 
 	// Count the number of routes and see if the soltion is OK
 	j = (int)chromT[k].size() ;
-	for (int jj = 0 ; jj < params->nombreVehicules[k] ; jj ++ )
+	for (int jj = 0 ; jj < params->numberVehicle[k] ; jj ++ )
 	{
-		pred[k][params->nombreVehicules[k] - jj][j] = pred[k][0][j] ;
-		j = pred[k][params->nombreVehicules[k] - jj][j] ;
+		pred[k][params->numberVehicle[k] - jj][j] = pred[k][0][j] ;
+		j = pred[k][params->numberVehicle[k] - jj][j] ;
 	}
 
 	// If we arrived to the beginning
@@ -297,20 +297,20 @@ void Individual::splitLF(int k)
 { 
 	double cost, mydist,mytminex,myloadex;
 	int i,j ;
-	myseq->initialisation(params->ordreVehicules[k][0].depotNumber,params,this,k,false);
+	myseq->initialisation(params->orderVehicles[k][0].depotNumber, params, this, k, false);
 
 	// preprocessing arc costs
 	for (int i=0 ; i < (int)chromT[k].size() ; i++ )
 	{
-		seq[i]->initialisation(params->ordreVehicules[k][0].depotNumber,params,this,k,false);
-		coutArcsSplit[i][i].evaluation = seq[i]->evaluation(seq[i],myseq,&params->ordreVehicules[k][0],mydist,mytminex,myloadex);
+		seq[i]->initialisation(params->orderVehicles[k][0].depotNumber, params, this, k, false);
+		coutArcsSplit[i][i].evaluation = seq[i]->evaluation(seq[i], myseq, &params->orderVehicles[k][0], mydist, mytminex, myloadex);
 		coutArcsSplit[i][i].capacityViol =  myloadex ;
 		coutArcsSplit[i][i].distance = mydist ;
 		coutArcsSplit[i][i].lengthViol  =  mytminex ;
-		for (int j=i ; j < (int)chromT[k].size() && seq[j]->load <= params->ordreVehicules[k][0].vehicleCapacity*params->borne ; j++ )
+		for (int j=i ; j < (int)chromT[k].size() && seq[j]->load <= params->orderVehicles[k][0].vehicleCapacity * params->borne ; j++ )
 		{
 			seq[j+1]->concatOneAfter(seq[j],chromT[k][j],this,k);
-			coutArcsSplit[i][j+1].evaluation = seq[j+1]->evaluation(seq[j+1],myseq,&params->ordreVehicules[k][0],mydist,mytminex,myloadex);
+			coutArcsSplit[i][j+1].evaluation = seq[j+1]->evaluation(seq[j+1], myseq, &params->orderVehicles[k][0], mydist, mytminex, myloadex);
 			coutArcsSplit[i][j+1].capacityViol =  myloadex ;
 			coutArcsSplit[i][j+1].distance = mydist ;
 			coutArcsSplit[i][j+1].lengthViol  =  mytminex ;
@@ -319,7 +319,7 @@ void Individual::splitLF(int k)
 
 
 	// for each vehicle
-	for ( int cam = 0 ; cam < params->nombreVehicules[k] ; cam++)
+	for (int cam = 0 ; cam < params->numberVehicle[k] ; cam++)
 	{
 		i = 0 ;
 		// propagate all labels
@@ -339,7 +339,7 @@ void Individual::splitLF(int k)
 				pred[k][cam+1][i] = i ;
 			}
 			j = i ;
-			while (j < (int)chromT[k].size() && myloadex <= params->ordreVehicules[k][cam].vehicleCapacity*(params->borne-1.0) )
+			while (j < (int)chromT[k].size() && myloadex <= params->orderVehicles[k][cam].vehicleCapacity * (params->borne - 1.0) )
 			{
 				cost = coutArcsSplit[i][j+1].evaluation ;
 				myloadex = coutArcsSplit[i][j+1].capacityViol ;
@@ -361,11 +361,11 @@ void Individual::splitLF(int k)
 	}
 
 	// we cumulate the costs
-	costSol.capacityViol += potentials[params->nombreVehicules[k]][chromT[k].size()].capacityViol ;
-    costSol.evaluation += potentials[params->nombreVehicules[k]][chromT[k].size()].evaluation ;
-    costSol.distance += potentials[params->nombreVehicules[k]][chromT[k].size()].distance ;
-    costSol.lengthViol += potentials[params->nombreVehicules[k]][chromT[k].size()].lengthViol ;
-    costSol.routes += potentials[params->nombreVehicules[k]][chromT[k].size()].routes ;
+	costSol.capacityViol += potentials[params->numberVehicle[k]][chromT[k].size()].capacityViol ;
+    costSol.evaluation += potentials[params->numberVehicle[k]][chromT[k].size()].evaluation ;
+    costSol.distance += potentials[params->numberVehicle[k]][chromT[k].size()].distance ;
+    costSol.lengthViol += potentials[params->numberVehicle[k]][chromT[k].size()].lengthViol ;
+    costSol.routes += potentials[params->numberVehicle[k]][chromT[k].size()].routes ;
 
 	// and clean the dynamic programming structures
 	initPot(k);
@@ -383,22 +383,22 @@ void Individual::measureSol()
 	{
 		// we use the result of Split to fill the other data structures
 		j = (int)chromT[kk].size() ;
-		for (int jj = 0 ; jj < params->nombreVehicules[kk] ; jj ++ )
+		for (int jj = 0 ; jj < params->numberVehicle[kk] ; jj ++ )
 		{
-			if ( j != (int)pred[kk][params->nombreVehicules[kk] - jj][j] ) 
+			if ( j != (int)pred[kk][params->numberVehicle[kk] - jj][j] )
 			{
 				// Beginning and end of this route in the chromosome
-				int deb = (int)pred[kk][params->nombreVehicules[kk] - jj][j] ;
+				int deb = (int)pred[kk][params->numberVehicle[kk] - jj][j] ;
 				int end = j-1 ;
 
 				// Counting the number of routes
 				nbRoutes++ ; 
 				
 				// Constructing the data to evaluate the route
-				seq[deb]->initialisation(params->ordreVehicules[kk][0].depotNumber,params,this,kk,false);
+				seq[deb]->initialisation(params->orderVehicles[kk][0].depotNumber, params, this, kk, false);
 				for (int i=deb; i <= end ; i++)
 					seq[i+1]->concatOneAfter(seq[i],chromT[kk][i],this,kk);
-				myCost = seq[deb]->evaluation(seq[end+1],seq[deb],&params->ordreVehicules[kk][0]);
+				myCost = seq[deb]->evaluation(seq[end+1],seq[deb],&params->orderVehicles[kk][0]);
 				
 				// Measuring this route to see if its longer than the maxRoute
 				if (myCost > maxRoute)
@@ -408,8 +408,8 @@ void Individual::measureSol()
 				totalCost += myCost ;
 			}
 			
-			j = (int)pred[kk][params->nombreVehicules[kk] - jj][j] ;
-			chromR[kk][params->nombreVehicules[kk] - jj - 1] = j ;
+			j = (int)pred[kk][params->numberVehicle[kk] - jj][j] ;
+			chromR[kk][params->numberVehicle[kk] - jj - 1] = j ;
 		}
 	}
 
@@ -420,7 +420,7 @@ void Individual::measureSol()
 
 void Individual::initPot(int day)
 {
-	for (int i = 0 ; i < params->nombreVehicules[day] + 1 ; i++)
+	for (int i = 0 ; i < params->numberVehicle[day] + 1 ; i++)
 		for (size_t j = 0 ; j <= chromT[day].size() + 1 ; j++)
             potentials[i][j].evaluation = 1.e30 ;
 
@@ -444,6 +444,15 @@ void Individual::updateLS()
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
+	    /*
+	     * 1. 清除localsearch中的routeOrder和每个客户节点的在当天的isPresent信息
+	     * 2. 对每一天的路径，从后往前安排，在split中找到当前路径的最后一个节点的下一个节点j，
+	     *    以及这个节点在split结构中的前驱节点i, 将i到j位置之间的节点通过链表连接成路径，
+	     *    过程中，填充routeOrder列表，按照最后一条路径到第一条路径，路径中的第一个，最后一个，中间顺序加入的客户点进行添加
+	     * 3. 对每条路径上的子串进行预处理，计算每个node中的4+sizeSD个子串结构，并得到完整解，判断解是否可行
+	     * 4. 设置routeEmpty结构（目前没用）
+	     *
+	     */
         // we reinitialize the "routeOrder" vector
         localSearch->routeOrder[kk].clear();
 
@@ -454,16 +463,18 @@ void Individual::updateLS()
 
         // using Split results to load the solution in the LS structure
         j = (int) chromT[kk].size();
+        // j指向的split分出的一个路径的最后一个位置+1，i指向的split分出的该路径的的第一个位置
 
-        for (int jj = 0; jj < params->nombreVehicules[kk]; jj++)
+        for (int jj = 0; jj < params->numberVehicle[kk]; jj++)
 		{
-			depot = params->ordreVehicules[kk][params->nombreVehicules[kk] - jj - 1].depotNumber ;
-			// i -> 前驱节点
-			i = (int)pred[kk][params->nombreVehicules[kk] - jj][j] ;
+            // 对于当天的每辆车（每条路径进行处理）第kk天的jj辆车, params->numberVehicle[kk] - jj - 1 意味着从后往前处理
+			depot = params->orderVehicles[kk][params->numberVehicle[kk] - jj - 1].depotNumber ;
+			// i -> split划分出的前驱节点
+			i = (int)pred[kk][params->numberVehicle[kk] - jj][j] ;
 
-			myDepot = &localSearch->depots[kk][params->nombreVehicules[kk] - jj - 1];
-			myDepotFin = &localSearch->depotsFin[kk][params->nombreVehicules[kk] - jj - 1];
-			myRoute = &localSearch->routes[kk][params->nombreVehicules[kk] - jj - 1];
+			myDepot = &localSearch->depots[kk][params->numberVehicle[kk] - jj - 1];
+			myDepotFin = &localSearch->depotsFin[kk][params->numberVehicle[kk] - jj - 1];
+			myRoute = &localSearch->routes[kk][params->numberVehicle[kk] - jj - 1];
 
 			myDepot->nextNode = myDepotFin ;
 			myDepot->pred = myDepotFin ;
@@ -472,6 +483,7 @@ void Individual::updateLS()
 
 			// a single visit
 			if ( j == i+1 ) {
+			    // 路径只有一个客户节点
                 myClient = &localSearch->clients[kk][chromT[kk][i]];
                 myClient->pred = myDepot;
                 myClient->nextNode = myDepotFin;
@@ -517,13 +529,15 @@ void Individual::updateLS()
 			j = i ;
 		}
 	
-		for (i = 0 ; i < params->nombreVehicules[kk] ; i++ )
+		for (i = 0 ; i < params->numberVehicle[kk] ; i++ )
+		    // 初始化了路径中的每个节点的预处理信息，包括从0->i, i->0, i->n, n->i, 还有i->j
+		    // seq结构预处理的过程就是dag求解最短路的过程，预处理完成时，事实上完成了完整解的求解
 			localSearch->routes[kk][i].updateRouteData(false);
 	}
 
-	// and we preprocess the route vide structure
+	// and we preprocess the route vide structure 这个结构是什么用？没看到，好像没用。。
 	for (int day = 1 ; day <= params->nbDays ; day++)
-		localSearch->setRouteVide(day);
+        localSearch->setRouteEmpty(day);
 }
 
 
@@ -537,7 +551,7 @@ void Individual::updateIndiv()
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
 		ordreRoutes.clear();
-		for (int ii=0 ; ii < params->nombreVehicules[kk] ; ii++)
+		for (int ii=0 ; ii < params->numberVehicle[kk] ; ii++)
 			ordreRoutes.push_back(&localSearch->routes[kk][ii]);
 
 		pos = 0 ;
@@ -647,16 +661,16 @@ void Individual::computeFollows ()
 			for (int i=1 ; i < (int)chromT[k].size() ; i++)
                 previous[chromT[k][i]][k] = chromT[k][i - 1];
 
-            follows[chromT[k][chromT[k].size() - 1]][k] = params->ordreVehicules[k][0].depotNumber;
-            previous[chromT[k][0]][k] = params->ordreVehicules[k][0].depotNumber;
+            follows[chromT[k][chromT[k].size() - 1]][k] = params->orderVehicles[k][0].depotNumber;
+            previous[chromT[k][0]][k] = params->orderVehicles[k][0].depotNumber;
 
 			// arranging those which are located at the beginning or end of a route
-			for (int i=0 ; i < params->nombreVehicules[k] ; i++)
+			for (int i=0 ; i < params->numberVehicle[k] ; i++)
 			{
 				jj = chromR[k][i] ;
-                previous[chromT[k][jj]][k] = params->ordreVehicules[k][0].depotNumber;
+                previous[chromT[k][jj]][k] = params->orderVehicles[k][0].depotNumber;
 				if (jj != 0)
-                    follows[chromT[k][jj - 1]][k] = params->ordreVehicules[k][0].depotNumber;
+                    follows[chromT[k][jj - 1]][k] = params->orderVehicles[k][0].depotNumber;
 			}
 		}
 	}

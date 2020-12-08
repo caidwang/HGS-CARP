@@ -104,8 +104,8 @@ int main (int argc, char *argv[])
 					throw string ("Fleet or distance minimization, too many overall loops, there must be a problem, aborting the run");
 
 				// Setting the distance constraint (only effective for the MM-kWRPP)
-				for (int v=0 ; v < mesParametresTab[nbpop-1]->nbVehiculesPerDep ; v++) 
-					mesParametresTab[nbpop-1]->ordreVehicules[1][v].maxRouteTime = distConstraint ;
+				for (int v=0 ; v < mesParametresTab[nbpop-1]->nbVehiclesPerDepot ; v++)
+					mesParametresTab[nbpop-1]->orderVehicles[1][v].maxRouteTime = distConstraint ;
 				
 				if (minMaxTour && minFleetSize) throw string("This program was not designed to optimize jointly the fleet size and length of the maximum tour");
 
@@ -124,7 +124,7 @@ int main (int argc, char *argv[])
 				if (nbpop >= 3) populationTab[nbpop-1]->addAllIndividus(populationTab[nbpop-3]);
 				// Solving
 				Genetic solver(mesParametresTab[nbpop-1],populationTab[nbpop-1],nb_ticks_allowed,true);
-				cout << "######### GA evolution ######### : " << "| FLEET SIZE : " << veh << " | DIST CONSTRAINT : " << mesParametresTab[nbpop-1]->ordreVehicules[1][0].maxRouteTime <<  endl ;
+				cout << "######### GA evolution ######### : " << "| FLEET SIZE : " << veh << " | DIST CONSTRAINT : " << mesParametresTab[nbpop-1]->orderVehicles[1][0].maxRouteTime << endl ;
 				solver.evolve(2000,1);
 				
 				// Checking if we need to go to the next fleet or distance constraint value
@@ -140,7 +140,7 @@ int main (int argc, char *argv[])
 				
 				// in the case of fleet size minimization for the PCARP (type == 32), we can test to see if there is enough capacity left to service all customers (trivial lower bound on fleet size)
 				// in this case, don't need to pursue the search further
-				if (c.get_type() == 32 && mesParametresTab[nbpop-1]->totalDemand > veh*mesParametresTab[nbpop-1]->ordreVehicules[1][0].vehicleCapacity*mesParametresTab[nbpop-1]->nbDays) 
+				if (c.get_type() == 32 && mesParametresTab[nbpop-1]->totalDemand > veh * mesParametresTab[nbpop-1]->orderVehicles[1][0].vehicleCapacity * mesParametresTab[nbpop - 1]->nbDays)
 				{
 					cout << "Insufficient capacity -- we can stop decreasing the fleet size" << endl ;
 					validExist = false ;

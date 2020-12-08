@@ -74,8 +74,8 @@ SeqData * seq321 ; // data for (i+2,i+1,i)
 
 // cost of insertion in this day, if the considered customer had to be inserted
 // This had to be generalized to the PCARP, as the demand may change as a function of the pattern choice, the
-// coutInsertion can be evaluated for all possible pattern which contain this day.
-vector < double > coutInsertion ;
+// costInsertion can be evaluated for all possible pattern which contain this day.
+vector < double > costInsertion ;
 
 // place where it would be inserted
 // This had to be generalized to the PCARP, as the demand may change as a function of the pattern choice, the
@@ -83,13 +83,14 @@ vector < double > coutInsertion ;
 vector < Node * > placeInsertion ;
 
 // possible moves for this customer and this day (granular search)
+// todo moves是在什么时候如何添加的？
 vector < int > moves ;
 
 // constructor 1
 Node(void);
 	
 // constructor 2
-Node(bool estUnDepot, int cour, int jour, bool estPresent, Node * suiv , Node * pred, Route * route, Params * params);
+Node(bool isDepot, int cour, int day, bool isPresent, Node * nextNode , Node * pred, Route * route, Params * params);
 
 // destructor
 ~Node(void);

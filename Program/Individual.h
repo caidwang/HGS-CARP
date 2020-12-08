@@ -196,7 +196,8 @@ public:
 	void initPot(int day) ;
 
 	// updating the LocalSearch structure with the information of the Individual.
-	// Warning, Split must have been computed before 
+	// Warning, Split must have been computed before
+	// 将split产生的路径信息装载到LS相关的结构中
 	void updateLS() ;
 
 	// Updating the individual data structures from the local search information

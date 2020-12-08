@@ -63,9 +63,16 @@ void Route::reverse ()
 	}
 }
 
+// 初始化了每个节点的预处理信息，包括从0->i, i->0, i->n, n->i, 还有i->j
 // CARP的子问题的求解在这部分完成
 void Route::updateRouteData (bool isForPrinting)
 {
+    /*
+     * 1。 从0仓点出发，对0-i，i-0的子串进行预处理
+     * 2。 从n仓点出发，对i->n,n->i的子串进行预处理
+     * 3。 根据sizeSD的限定，从0仓点开始处理i->j, j->i结构的预处理
+     * 4。 判断解的可行性
+     */
     bool firstIt ;
     int place = 0 ;
     double Xvalue = 0 ;
@@ -73,40 +80,40 @@ void Route::updateRouteData (bool isForPrinting)
     double nbNodes = 1 ;
 
     // Computing the auxiliary data on any subsequence (0..i), using forward recursion
-    Node * noeud = depot ;
-    noeud->place = place ;
-    noeud->seq0_i->initialisation(noeud->cour,params,individu,day,isForPrinting);
-    noeud->seqi_0->initialisation(noeud->cour,params,individu,day,false);
-    Xvalue += params->cli[noeud->cour].coord.x ;
-    Yvalue += params->cli[noeud->cour].coord.y ;
+    Node * node = depot ;
+    node->place = place ;
+    node->seq0_i->initialisation(node->cour, params, individu, day, isForPrinting);
+    node->seqi_0->initialisation(node->cour, params, individu, day, false);
+    Xvalue += params->cli[node->cour].coord.x ;
+    Yvalue += params->cli[node->cour].coord.y ;
 
     firstIt = true ;
-    while (!noeud->isDepot || firstIt) {
+    while (!node->isDepot || firstIt) {
         firstIt = false ;
-        noeud = noeud->nextNode ;
-        Xvalue += params->cli[noeud->cour].coord.x ;
-        Yvalue += params->cli[noeud->cour].coord.y ;
+        node = node->nextNode ;
+        Xvalue += params->cli[node->cour].coord.x ;
+        Yvalue += params->cli[node->cour].coord.y ;
         nbNodes ++ ;
         place ++ ;
-        noeud->place = place ;
+        node->place = place ;
         if (isForPrinting)
-            noeud->seq0_i->concatOneAfterWithPathTracking(noeud->pred->seq0_i,noeud->cour,individu,day);
+            node->seq0_i->concatOneAfterWithPathTracking(node->pred->seq0_i, node->cour, individu, day);
         else
-            noeud->seq0_i->concatOneAfter(noeud->pred->seq0_i,noeud->cour,individu,day);
-        noeud->seqi_0->concatOneBefore(noeud->pred->seqi_0,noeud->cour,individu,day);
+            node->seq0_i->concatOneAfter(node->pred->seq0_i, node->cour, individu, day);
+        node->seqi_0->concatOneBefore(node->pred->seqi_0, node->cour, individu, day);
     }
 
     // Computing the auxiliary data on any subsequence (i..n), using backward recursion
-    noeud = depot->pred ;
-    noeud->seqi_n->initialisation(noeud->cour,params,individu,day,false);
-    noeud->seqn_i->initialisation(noeud->cour,params,individu,day,false);
+    node = depot->pred ;
+    node->seqi_n->initialisation(node->cour, params, individu, day, false);
+    node->seqn_i->initialisation(node->cour, params, individu, day, false);
 
     firstIt = true ;
-    while (!noeud->isDepot || firstIt ) {
+    while (!node->isDepot || firstIt ) {
         firstIt = false ;
-        noeud = noeud->pred ;
-        noeud->seqi_n->concatOneBefore(noeud->nextNode->seqi_n, noeud->cour, individu, day);
-        noeud->seqn_i->concatOneAfter(noeud->nextNode->seqn_i, noeud->cour, individu, day);
+        node = node->pred ;
+        node->seqi_n->concatOneBefore(node->nextNode->seqi_n, node->cour, individu, day);
+        node->seqn_i->concatOneAfter(node->nextNode->seqn_i, node->cour, individu, day);
     }
 
     // Computing the auxiliary data on any subsequence (i..j), using forward recursion

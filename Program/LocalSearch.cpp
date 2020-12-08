@@ -28,7 +28,7 @@ void LocalSearch::runSearchTotal ()
 
     /* RUNNING THE LS */
     // RI -- Route improvement
-    updateMoves();
+    updateMoves(); // 总体更新的是clients[day][clientIndex]中的moves结构，在判断closestNeighbor时，将该client视为close的，并且在当天需要服务的客户节点，作为待选择的动作
     reinitAllSingleDayMoves();
     for (int day = 1; day <= params->nbDays; day++)
         nbMoves += mutationSameDay(day);
@@ -67,6 +67,17 @@ int LocalSearch::mutationSameDay (int day) {
     Node *tempNode;
     int size2;
 
+    /*
+     * 1. 根据routeOrder的顺序，选取U节点
+     *    - 如果U节点的移除不能获得收益，之后不惊醒swap和relocate相关的邻域操作
+     * 2. 在U节点的所有moves节点中顺序选择节点：
+     *    - 如果移除可以获得收益，Relocate, Swap, CROSS and I-CROSS
+     *    - 如果V和U不在同一个路径，2-opt 2-opt*
+     *    - 将V设为U后的节点，进行路径内的2opt
+     * 3. 测试将U插在路径头部和插入一个空路径
+     * 4. EjectChain阶段
+     */
+
     // We search and apply moves until a local minimum is attained
     while (!researchCompleted) {
         researchCompleted = true;
@@ -74,6 +85,7 @@ int LocalSearch::mutationSameDay (int day) {
 
         // For every node U in random order
         for (int posU = 0; posU < (int) routeOrder[day].size(); posU++) {
+            // movePerformed 只能是0/1，当采纳了一次邻域操作时，说明这个节点的变换可能还没到达局部最优，下一轮邻域尝试依然在这个节点上进行
             posU -= movePerformed; // We return on the last node if there has been a move
             nbMoves += movePerformed;
             movePerformed = 0;
@@ -87,7 +99,7 @@ int LocalSearch::mutationSameDay (int day) {
             // In the CARP, some service removal do not reduce the cost of the route
             // In this case, very few moves can improve the solution (only 2-opt variants), and thus SWAP and RELOCATE variants do not need to be tested
             // 去除不必要的LS步骤以缩小LS的搜索空间
-            costBeforeRemoval = nodeU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle);
+            costBeforeRemoval = nodeU->seq0_i->evaluation(routeU->depot->pred->seq0_i, routeU->vehicle); // 去最后一个depot取0->i的seq的penalty cost
             costAfterRemoval = nodeU->seq0_i->evaluation(nodeU->pred->seq0_i, nodeU->nextNode->seqi_n, routeU->vehicle);
             gainWhenRemoving = (costAfterRemoval < costBeforeRemoval - 0.1);
 
@@ -153,7 +165,7 @@ int LocalSearch::mutationSameDay (int day) {
             }
 
             // Special cases : testing the insertions behind the depot, and the empty routes
-            for (int route = 0; route < params->nbVehiculesPerDep && movePerformed == 0; route++) {
+            for (int route = 0; route < params->nbVehiclesPerDepot && movePerformed == 0; route++) {
                 nodeV = &depots[day][route];
                 routeV = nodeV->route;
                 y = nodeV->nextNode;
@@ -219,7 +231,7 @@ int LocalSearch::mutationDifferentDay ()
 	firstLoop = true ;
 
 	for (int day = 1 ; day <= params->nbDays ; day++)
-		for (int r=0 ; r < params->nombreVehicules[day] ; r++)
+		for (int r=0 ; r < params->numberVehicle[day] ; r++)
 			routes[day][r].initiateInsertions() ;
 
 	while ( !researchCompleted )
@@ -451,7 +463,7 @@ int LocalSearch::interRouteGeneralInsert()
 	// Update the pre-processed data on the subsequences of the route
 	placeU->route->updateRouteData(false);
 	placeV->route->updateRouteData(false);
-	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
+    setRouteEmpty(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInterSwap ++ ;
@@ -532,7 +544,7 @@ int LocalSearch::interRoute2Opt ()
 	// Update the pre-processed data on the subsequences of the route
 	routeU->updateRouteData(false);
 	routeV->updateRouteData(false);
-	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
+    setRouteEmpty(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
@@ -652,7 +664,7 @@ int LocalSearch::interRoute2OptInv()
 	// Update the pre-processed data on the subsequences of the route
 	routeU->updateRouteData(false);
 	routeV->updateRouteData(false);
-	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
+    setRouteEmpty(nodeU->day); // Keep a pointer on the first empty route
 
 	researchCompleted = false ; // Not finished the search
 	nbInter2Opt ++ ;
@@ -1167,7 +1179,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	} 
 
 	routeU->updateRouteData(false); // Update the pre-processed data on the subsequences of the route
-	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
+    setRouteEmpty(nodeU->day); // Keep a pointer on the first empty route
 	researchCompleted = false ; // Not finished the search
 	nbIntraSwap ++ ;
     nodeU = tempU ;
@@ -1222,7 +1234,7 @@ int LocalSearch::intraRoute2Opt ()
 	nodeUpred->nextNode = nodeV ;
 	y->pred = nodeU ;
 	routeU->updateRouteData(false);  // Update the pre-processed data on the subsequences of the route
-	setRouteVide(nodeU->day); // Keep a pointer on the first empty route
+    setRouteEmpty(nodeU->day); // Keep a pointer on the first empty route
 	researchCompleted = false ; // Not finished the search
 	nbIntra2Opt ++ ;
 	return 1 ; // Return Success
@@ -1259,9 +1271,9 @@ int LocalSearch::searchBetterPattern (int client)
 				// (Note that it would be possible to do way faster by considering the fact that only the demand of 
 				// a single delivery changes... and sometimes its even the same for different patterns)
 				// Still, this is a simplistic implementation for the tests PCARP, no need for the highest performance
-				if (noeudTravail->coutInsertion[pat] > 1.e29 || firstLoop)
+				if (noeudTravail->costInsertion[pat] > 1.e29 || firstLoop)
                     computeCostInsertion(noeudTravail, pat) ;
-				depense += noeudTravail->coutInsertion[pat] ;
+				depense += noeudTravail->costInsertion[pat] ;
 			}
 		}
 
@@ -1320,7 +1332,7 @@ void LocalSearch::computeCostInsertion(Node * client, int pattern)
 {
 	// Computing the best cost for inserting a client in its day
 	Route * myRoute ;
-	client->coutInsertion[pattern] = 1.e30 ;
+	client->costInsertion[pattern] = 1.e30 ;
 	client->placeInsertion[pattern] = NULL ;
 
     nodeU = client ;
@@ -1328,15 +1340,15 @@ void LocalSearch::computeCostInsertion(Node * client, int pattern)
 	routeU = nodeU->route ;
 
 	// Find the best insertion for each route
-	for (int r=0 ; r < params->nombreVehicules[client->day] ; r++)
+	for (int r=0 ; r < params->numberVehicle[client->day] ; r++)
 	{
 		myRoute = &routes[client->day][r] ;
 		if ( myRoute->coutInsertionClient[client->cour][pattern] > 1.e29 || firstLoop ) 
 			evalInsertClient(myRoute,client,pattern) ;
 
-		if ( myRoute->coutInsertionClient[client->cour][pattern] < client->coutInsertion[pattern] - EPSILON_LS)
+		if ( myRoute->coutInsertionClient[client->cour][pattern] < client->costInsertion[pattern] - EPSILON_LS)
 		{
-			client->coutInsertion[pattern] = myRoute->coutInsertionClient[client->cour][pattern] ;
+			client->costInsertion[pattern] = myRoute->coutInsertionClient[client->cour][pattern] ;
 			client->placeInsertion[pattern] = myRoute->placeInsertionClient[client->cour][pattern] ;
 		}
 	}
@@ -1344,7 +1356,7 @@ void LocalSearch::computeCostInsertion(Node * client, int pattern)
 	// If its possible to improve the placement of a customer in a day where its already placed, and according to its current pattern, then we raise this flag
 	if (client->isPresent // its placed here
 		&& testingIncumbentPattern // with the same pattern
-		&& client->route->coutInsertionClient[client->cour][pattern] > client->coutInsertion[pattern] + EPSILON_LS) // but we can do better
+		&& client->route->coutInsertionClient[client->cour][pattern] > client->costInsertion[pattern] + EPSILON_LS) // but we can do better
 		intraDayDisplacement = true ;
 }
 
@@ -1442,6 +1454,7 @@ void LocalSearch::shuffleRouteOrder() {
     }
 }
 
+// 总体更新的是clients[day][clientIndex]中的moves结构，在判断closestNeighbor时，将该client视为close的，并且在当天需要服务的客户节点，作为待选择的动作
 void LocalSearch::updateMoves ()
 {
 	int client, client2, size ;
@@ -1459,44 +1472,49 @@ void LocalSearch::updateMoves ()
 	}
 }
 
-void LocalSearch::setRouteVide(int day)
+void LocalSearch::setRouteEmpty(int day)
 {
-	routeVide[day] = NULL ;
+    /*
+     * 因为在updateLS阶段，路径是从后往前分配的，如果split切出的路径数量小雨车辆数，前面的若干的路径是空路径，
+     * 空路径的特点，起点depot的下一个节点也是depot，并且起点depot的route为NULL
+     * 该方法使得routeEmpty[day]指向最后一个空路径
+     */
+    routeEmpty[day] = NULL ;
 	int route = 0 ;
-	while (routeVide[day] == NULL && route < params->nbVehiculesPerDep )
+	while (routeEmpty[day] == NULL && route < params->nbVehiclesPerDepot )
 	{
-		if (depots[day][route].nextNode->isDepot) routeVide[day] = depots[day][route].route ;
+		if (depots[day][route].nextNode->isDepot) routeEmpty[day] = depots[day][route].route ;
 		route ++ ;
 	}
 }
 
 void LocalSearch::nodeTestedForEachRoute (int cli, int day)
 {
-	for (int route = 0 ; route < (int)params->nombreVehicules[day] ; route ++)
+	for (int route = 0 ; route < (int)params->numberVehicle[day] ; route ++)
 		routes[day][route].nodeAndRouteTested[cli]=true ;	
 }
 
-void LocalSearch::placeManquants ()
+void LocalSearch::placeMissing ()
 {
 	// Insertion procedure for the crossover PIX
 	int k ;
-	pattern meilleurPattern ;
-	double depense, meilleureDepense ;
-	int indexMeilleur ;
-	Node * noeudTravail ;
+	pattern betterPattern ;
+	double depense, betterDepense ;
+	int indexBetter ;
+	Node * nodeTravail ;
 	int calcul1, calcul2 ;
 	pattern pattern1, pattern2 ;
 
 	firstLoop = true ;
 
 	for (int day = 1 ; day <= params->nbDays ; day++)
-		for (int r=0 ; r < params->nombreVehicules[day] ; r++)
+		for (int r=0 ; r < params->numberVehicle[day] ; r++)
 			routes[day][r].initiateInsertions() ;
 
 	// We iterate on missing visits
 	for (int i=0 ; i < (int)individu->toPlace.size() ; i++ )
 	{
-		meilleureDepense = 1.e30 ;
+        betterDepense = 1.e30 ;
 		k = individu->toPlace[i] ;
 		pattern1 = individu->chromP[k] ;
 
@@ -1512,34 +1530,34 @@ void LocalSearch::placeManquants ()
 				{
 					if (calcul2 % 2 == 1)
 					{
-						noeudTravail = &clients[params->formerNbDays - kk + pattern2.dep * params->formerNbDays][k] ;
-                        computeCostInsertion(noeudTravail, pat) ;
-						depense += noeudTravail->coutInsertion[pat] ;
+                        nodeTravail = &clients[params->formerNbDays - kk + pattern2.dep * params->formerNbDays][k] ;
+                        computeCostInsertion(nodeTravail, pat) ;
+						depense += nodeTravail->costInsertion[pat] ;
 					}
 					calcul2 = calcul2/2 ;
 				}
 
-				if (depense < meilleureDepense)
+				if (depense < betterDepense)
 				{
-					meilleureDepense = depense ;
-					meilleurPattern = pattern2 ;
-					indexMeilleur = pat ;
+                    betterDepense = depense ;
+                    betterPattern = pattern2 ;
+                    indexBetter = pat ;
 				}
 			}
 		}
 
 		// Updating the chromP with the chosen pattern
-		individu->chromP[k] = meilleurPattern ;
+		individu->chromP[k] = betterPattern ;
 
 		// Inserting in the new locations
 		calcul1 = pattern1.pat ;
-		calcul2 = meilleurPattern.pat ;
+		calcul2 = betterPattern.pat ;
 		for (int kk = 0 ; kk < params->formerNbDays ; kk++)
 		{
 			if (calcul2 % 2 == 1 && calcul1 % 2 == 0)
 			{
-				Node * hereCli = &clients[params->formerNbDays - kk + meilleurPattern.dep * params->formerNbDays][k] ;
-				Node * thereCli = hereCli->placeInsertion[indexMeilleur] ;
+				Node * hereCli = &clients[params->formerNbDays - kk + betterPattern.dep * params->formerNbDays][k] ;
+				Node * thereCli = hereCli->placeInsertion[indexBetter] ;
 				addNoeud(hereCli,thereCli);
 			}
 			calcul1 = calcul1/2 ;
@@ -1572,7 +1590,7 @@ void LocalSearch::removeNoeud(Node * U)
 	U->pred = NULL ;
 	U->nextNode = NULL ;
 	temp->route->updateRouteData(false);
-	setRouteVide(U->day);
+    setRouteEmpty(U->day);
 
 	// Managing the other data structures
 	individu->chromT[U->day].pop_back();
@@ -1583,7 +1601,7 @@ void LocalSearch::removeNoeud(Node * U)
 	temp->route->initiateInsertions();
 	for (int i= params->nbDepots ; i< params->nbDepots + params->nbClients ; i++)
 		for (int p=0 ; p < (int)params->cli[i].visits.size() ; p++)
-			clients[U->day][i].coutInsertion[p] = 1.e30 ;
+			clients[U->day][i].costInsertion[p] = 1.e30 ;
 }
 
 void LocalSearch::addNoeud(Node * U, Node * V)
@@ -1598,7 +1616,7 @@ void LocalSearch::addNoeud(Node * U, Node * V)
 	U->isPresent = true ;
 	U->route = V->route ;
 	U->route->updateRouteData(false);
-	setRouteVide(U->day);
+    setRouteEmpty(U->day);
 
 	// Manage the other data structures
 	individu->chromT[U->day].push_back(0);
@@ -1608,7 +1626,7 @@ void LocalSearch::addNoeud(Node * U, Node * V)
 	U->route->initiateInsertions();
 	for (int i= params->nbDepots ; i< params->nbDepots + params->nbClients ; i++)
 		for (int p=0 ; p < (int)params->cli[i].visits.size() ; p++)
-			clients[U->day][i].coutInsertion[p] = 1.e30 ;
+			clients[U->day][i].costInsertion[p] = 1.e30 ;
 }
 
 void LocalSearch::removeOP (int day, int client) {
@@ -1638,7 +1656,7 @@ void LocalSearch::controlRoutes ()
 	Node * autreNoeud ;
 	bool firstIt = true ;
 	for (int k=1 ; k<=params->nbDays ; k++)
-		for (int r=0 ; r < params->nombreVehicules[k] ; r++)
+		for (int r=0 ; r < params->numberVehicle[k] ; r++)
 		{
 			firstIt = true ;
 			if (tracesDebug) cout << "day(" << k << ") " << "route(" << r << ") // " ;
@@ -1666,14 +1684,14 @@ void LocalSearch::reinitSingleDayMoves(Route * r)
 		r->nodeAndRouteTested[i] = false ;
 
 	for (Node * tempNoeud = r->depot->nextNode ; !tempNoeud->isDepot ; tempNoeud = tempNoeud->nextNode)
-		for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
+		for (int route = 0 ; route < params->nbVehiclesPerDepot ; route ++)
 			depots[tempNoeud->day][route].route->nodeAndRouteTested[tempNoeud->cour] = false ;
 }
 
 void LocalSearch::reinitAllSingleDayMoves()
 {
 	for (int k=1 ; k<= params->nbDays ; k++)
-		for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
+		for (int route = 0 ; route < params->nbVehiclesPerDepot ; route ++)
 			for (int i=0 ; i < params->nbClients + params->nbDepots ; i ++ )
 				depots[k][route].route->nodeAndRouteTested[i] = false ;
 }
@@ -1696,13 +1714,13 @@ bool LocalSearch::ejectionChains (int day)
 
 	// 1) CHOOSE AN ORDER FOR THE BINS
 	vector < Node * > ordreBins ;
-	for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
+	for (int route = 0 ; route < params->nbVehiclesPerDepot ; route ++)
 		ordreBins.push_back(&depots[day][route]);
 	std::random_shuffle(ordreBins.begin(),ordreBins.end());
 
 	// 2) UPDATE THE DATA STRUCTURE WILL ALL NECESSARY INFORMATIONS AND THE GOOD SIZE
 	myRouteIndex = 0 ;
-	for (int route = 0 ; route < params->nbVehiculesPerDep ; route ++)
+	for (int route = 0 ; route < params->nbVehiclesPerDepot ; route ++)
 	{
 		myNoeud = ordreBins[route] ;
 		// if the route is not empty, this makes a new layer in the ejection chains graph
@@ -1841,7 +1859,7 @@ bool LocalSearch::ejectionChains (int day)
 	{
 		EC_element * elementCour ;
 		EC_element * elementPred ;
-		//cout << "----------------- EJECTION CHAINS PHASE ---------------" << endl ;
+		cout << "----------------- EJECTION CHAINS PHASE ---------------" << endl ;
 		for (int myID = 0 ; myID < 1 ; myID++)
 		{
 			nbEjectionChains ++ ;
@@ -1879,7 +1897,7 @@ bool LocalSearch::ejectionChains (int day)
 				if (elementPred != NULL) elementPred = elementCour->pred ;
 			}
 		}
-		setRouteVide(day);
+        setRouteEmpty(day);
 		return true ;
 	}
 	else
@@ -1925,9 +1943,10 @@ void LocalSearch::addReverseSeqDataInPieces (Node * node, int length, int day)
 LocalSearch::LocalSearch(void)
 {
 	allAttributesSet = false ;
-	seqdeb = NULL ;
+    seqStart = NULL ;
 }
 
+// 预处理结构汇总在一个连续区域，但是效益并不高，复现可以考虑不连续的持有
 LocalSearch::LocalSearch(Params * params, Individual * individu) : params (params), individu(individu)
 {
 	nbDays = params->nbDays ;
@@ -1939,7 +1958,7 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 	nbIntra2Opt = 0 ;
 	nbEjectionChains = 0 ;
 	nbEjectionChainsNodes = 0 ;
-	seqdeb = NULL ;
+    seqStart = NULL ;
 	nbTotalRISinceBeginning = 0 ;
 	nbTotalPISinceBeginning = 0 ;
 	vector < Node * > tempNoeud ;
@@ -1952,7 +1971,7 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 
 	for (int kk = 1 ; kk <= params->nbDays ; kk++)
 	{
-		nbVeh = params->nombreVehicules[kk] ;
+		nbVeh = params->numberVehicle[kk] ;
 		clients[kk] = new Node [params->nbClients + params->nbDepots + 1] ;
 		depots[kk] = new Node [nbVeh] ;
 		depotsFin[kk] = new Node [nbVeh] ;
@@ -1963,9 +1982,9 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 
 		for (int i = 0 ; i < nbVeh ; i++ )
 		{
-			depots[kk][i] = Node(true, params->ordreVehicules[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
-			depotsFin[kk][i] = Node(true, params->ordreVehicules[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
-			routes[kk][i] = Route(i,0,&params->ordreVehicules[kk][i],params,individu,kk);
+			depots[kk][i] = Node(true, params->orderVehicles[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
+			depotsFin[kk][i] = Node(true, params->orderVehicles[kk][i].depotNumber, kk, false, NULL, NULL, NULL, params);
+			routes[kk][i] = Route(i, 0, &params->orderVehicles[kk][i], params, individu, kk);
 			depots[kk][i].route = &routes[kk][i] ;
 			depotsFin[kk][i].route = &routes[kk][i] ;
 			routes[kk][i].depot = &depots[kk][i] ;
@@ -1980,23 +1999,25 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 
 	for (int day = 0 ; day <= params->nbDays ; day++) {
         routeOrder.push_back(temp2);
-        routeVide.push_back(NULL);
+        routeEmpty.push_back(NULL);
     }
 
     for (int i = params->nbDepots; i < params->nbDepots + params->nbClients; i++)
         routeOrder[0].push_back(i);
 
 	// Initialization for ejection chains
-	for (int v=0 ; v < params->nbVehiculesPerDep ; v ++)
+	for (int v=0 ; v < params->nbVehiclesPerDepot ; v ++)
 		ejectionGraph.push_back(vector <EC_element> (params->nbClients+1));
-	ec_nbElements = vector <int> (params->nbVehiculesPerDep);
+	ec_nbElements = vector <int> (params->nbVehiclesPerDepot);
 
 	// Initialization of the SeqData structures, for all nodes
 	// These structures were designed to stay contiguous in memory (however it had only a negligible impact on performance)
+	// seqStart包含了一个大的seqData数组，所有client的预处理子串连续存储在这个区域
+	// 这部分代码用每个node对应的client的index初始化了所有其持有的seqData，并指向对应的数组
 	int nbSeqsSet = 0 ;
-	int taillemyseqDatas = (params->sizeSD + params->sizeSD + 4)*(params->nbClients + params->nbDepots + 2*params->nbVehiculesPerDep)*params->nbDays ;
+	int taillemyseqDatas = (params->sizeSD + params->sizeSD + 4) * (params->nbClients + params->nbDepots + 2*params->nbVehiclesPerDepot) * params->nbDays ;
 	SeqData * myseqDatas = new SeqData [taillemyseqDatas] ;
-	seqdeb = myseqDatas ;
+    seqStart = myseqDatas ;
 	for (int k=1 ; k <= params->nbDays ; k++)
 	{
 		for (int i=0 ; i < params->nbClients + params->nbDepots ; i++) 
@@ -2015,8 +2036,8 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 			clients[k][i].setRemaining();
 			nbSeqsSet += 4+params->sizeSD + params->sizeSD ;
 		}
-
-		for (int i=0 ; i < params->nbVehiculesPerDep  ; i++) 
+        // 分配仓点node的预处理seqData
+		for (int i=0 ; i < params->nbVehiclesPerDepot  ; i++)
 		{
 			for (int ii=nbSeqsSet ; ii < nbSeqsSet+4+params->sizeSD+params->sizeSD ; ii++)
 				myseqDatas[ii].initialisation(depots[k][i].cour,params,individu,k,false);
@@ -2032,8 +2053,8 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 			depots[k][i].setRemaining();
 			nbSeqsSet += 4+params->sizeSD + params->sizeSD ;
 		}
-
-		for (int i=0 ; i < params->nbVehiculesPerDep ; i++) 
+        // depotFin和depot不共用预处理子串，上下两段代码的唯一区别在于depots和depotsFin
+		for (int i=0 ; i < params->nbVehiclesPerDepot ; i++)
 		{
 			for (int ii=nbSeqsSet ; ii < nbSeqsSet+4+params->sizeSD+params->sizeSD ; ii++)
 				myseqDatas[ii].initialisation(depotsFin[k][i].cour,params,individu,k,false);
@@ -2054,7 +2075,7 @@ LocalSearch::LocalSearch(Params * params, Individual * individu) : params (param
 
 LocalSearch::~LocalSearch(void)
 {	
-	SeqData * seqdeb2 = (SeqData*) seqdeb ;
+	SeqData * seqdeb2 = (SeqData*) seqStart ;
 	delete [] seqdeb2 ;
 
 	if (allAttributesSet)

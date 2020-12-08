@@ -124,8 +124,7 @@ public:
 	int formerNbDays ; // copy of the number of days
 
 	// number of vehicles per depot
-	int nbVehiculesPerDep ;
-
+	int nbVehiclesPerDepot ;
 	// number of depots
 	int nbDepots ;
 
@@ -133,10 +132,10 @@ public:
 	vector <double> dayCapacity ;
 
 	// list of vehicles available for each day
-	vector < vector < Vehicle > > ordreVehicules ;
+	vector < vector < Vehicle > > orderVehicles ;
 
 	// number of vehicles available for each day
-	vector <int> nombreVehicules ;
+	vector <int> numberVehicle ;
 
 	// array containing the information of each separate client/service
 	Client * cli ;
@@ -192,7 +191,7 @@ public:
 	void setMethodParams () ;
 
 	// get the data from the stream
-	void preleveDonnees (string nomInstance) ;
+	void collectData (string nomInstance) ;
 	void ar_parseOtherLinesCARP(); // some sub-procedures when reading the various instance formats
 	void ar_parseOtherLinesNEARP();
 	void ar_computeDistancesNodes();
