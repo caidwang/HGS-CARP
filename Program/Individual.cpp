@@ -191,6 +191,9 @@ Individual::~Individual()
 
 void Individual::generalSplit()
 {
+    /*
+     *
+     */
     costSol.evaluation = 0 ;
     costSol.capacityViol = 0 ;
     costSol.distance = 0 ;
@@ -279,12 +282,12 @@ int Individual::splitSimple(int k)
         costSol.distance += potentials[0][chromT[k].size()].distance ;
         costSol.lengthViol += potentials[0][chromT[k].size()].lengthViol ;
         costSol.routes += potentials[0][chromT[k].size()].routes ;
-		initPot(k); // we reinitialize the dynamic programming structures for the next use
+        initPotentials(k); // we reinitialize the dynamic programming structures for the next use
 		return 1 ;
 	}
 	else
 	{
-		initPot(k); // we reinitialize the dynamic programming structures for the next use
+        initPotentials(k); // we reinitialize the dynamic programming structures for the next use
 		return 0 ;
 	}
 }
@@ -368,7 +371,7 @@ void Individual::splitLF(int k)
     costSol.routes += potentials[params->numberVehicle[k]][chromT[k].size()].routes ;
 
 	// and clean the dynamic programming structures
-	initPot(k);
+    initPotentials(k);
 }
 
 void Individual::measureSol()
@@ -418,7 +421,7 @@ void Individual::measureSol()
                          + params->penalityLength * costSol.lengthViol ;
 }
 
-void Individual::initPot(int day)
+void Individual::initPotentials(int day)
 {
 	for (int i = 0 ; i < params->numberVehicle[day] + 1 ; i++)
 		for (size_t j = 0 ; j <= chromT[day].size() + 1 ; j++)
@@ -543,6 +546,10 @@ void Individual::updateLS()
 
 void Individual::updateIndiv()
 {
+    /*
+     * 1. 更新chromT
+     * 2. 重新split
+     */
 	// Now, we go through the LS structure to update the individual (its chromosomes)
 	int pos ; 
 	vector < Route * > ordreRoutes ;

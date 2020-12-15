@@ -193,7 +193,7 @@ public:
 	void measureSol() ;
 
 	// initialization of the potentials vector for Split
-	void initPot(int day) ;
+	void initPotentials(int day) ;
 
 	// updating the LocalSearch structure with the information of the Individual.
 	// Warning, Split must have been computed before

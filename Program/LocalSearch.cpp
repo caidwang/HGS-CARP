@@ -54,7 +54,8 @@ void LocalSearch::runSearchTotal ()
 	}
 }
 
-// main function for the RI procedure 突变过程
+// main function for the RI procedure 突变过程,
+// 一旦找到一个更优邻域操作，直接停止这一轮邻域搜索，在当前U上执行邻域操作后再进行搜索，直到当前U的邻域空间被穷举
 int LocalSearch::mutationSameDay (int day) {
     // Local Search for one given day
     // Based on the classic moves (Relocate, Swap, CROSS, 2-Opt and 2-Opt*)
@@ -69,7 +70,7 @@ int LocalSearch::mutationSameDay (int day) {
 
     /*
      * 1. 根据routeOrder的顺序，选取U节点
-     *    - 如果U节点的移除不能获得收益，之后不惊醒swap和relocate相关的邻域操作
+     *    - 如果U节点的移除不能获得收益，之后不进行swap和relocate相关的邻域操作
      * 2. 在U节点的所有moves节点中顺序选择节点：
      *    - 如果移除可以获得收益，Relocate, Swap, CROSS and I-CROSS
      *    - 如果V和U不在同一个路径，2-opt 2-opt*
@@ -142,7 +143,7 @@ int LocalSearch::mutationSameDay (int day) {
                         // Testing Relocate, Swap, CROSS and I-CROSS (limited to 2 customers) of nodeU and nodeV
                         // Case where they are in the same route
                         if (movePerformed != 1 && gainWhenRemoving)
-                            movePerformed = intraRouteGeneralInsertDroite();
+                            movePerformed = intraRouteGeneralInsertRight();
                         nodeV = tempNode;
                         y = nodeV->nextNode;
                     }
@@ -203,7 +204,7 @@ int LocalSearch::mutationSameDay (int day) {
                         // Insertion after the depot, in the same route
                         if ((params->isCorrelated[nodeU->cour][nodeV->cour] ||
                              params->isCorrelated[nodeU->cour][y->cour]) && movePerformed != 1)
-                            movePerformed = intraRouteGeneralInsertDroite();
+                            movePerformed = intraRouteGeneralInsertRight();
 
                         nodeV = tempNode;
                         y = nodeV->nextNode;
@@ -260,6 +261,20 @@ int LocalSearch::interRouteGeneralInsert()
 	// 1 -> send U
 	// 2 -> send U,Unext
 	// 3 -> send Unext,U
+	/*
+	 * 1,0 将U 重新放在V前面
+	 * 1,1 将U和V交换位置
+	 * 2,0 将U,x重新放在V前面
+	 * 2,1 将U,x和V交换位置
+	 * 2,2 将U,x和V,y交换位置
+	 * 3,0 将x,U放在V前面
+	 * 3,1 将x,U和V交换
+	 * 3,2 将x,U和V,y交换
+	 * 3,3 将x,U和y,V交换
+	 *
+	 * 如果LB能够通过，进行更加仔细的evaluation
+	 * 如果有提升，实际进行交换，完成一次邻域操作
+	 */
 	for (int i=0 ; i<4 ; i++ )
 		for (int j=0 ; j<4 ; j++)
 			resultMoves[i][j] = 1.e29 ; 
@@ -473,6 +488,9 @@ int LocalSearch::interRouteGeneralInsert()
 int LocalSearch::interRoute2Opt ()
 {
 	// Testing 2-Opt* between U and V
+	/*
+	 * A->U->x->..., B->V->y->... => A->y->..., B->V->U->x->...
+	 */
 	double cost ;
 	SeqData * seq = nodeU->seq0_i ;
 
@@ -557,6 +575,11 @@ int LocalSearch::interRoute2Opt ()
 int LocalSearch::interRoute2OptInv()
 {
 	// 2-Opt* with route inversions
+    /*
+     * A->U->x->A', B->V->y->B'
+     * =>
+     * (B'->y->x->A' / A'->x->y->B') + (A->U->V->B / B->V->A->U)
+     */
 	SeqData * seq = nodeU->seq0_i ;
 	double cost ;
 	double costTemp ;
@@ -671,26 +694,26 @@ int LocalSearch::interRoute2OptInv()
 	return 1 ; // Return Success
 }
 
-int LocalSearch::intraRouteGeneralInsertDroite ()
+int LocalSearch::intraRouteGeneralInsertRight ()
 {
 	// For a pair of nodes U, V, IN THE SAME ROUTE, tests together the Relocate, Swap, and variants of CROSS and I-CROSS limited to two consecutive nodes.
 	Node * tempU = nodeU ;
 	Node * tempV = nodeV ;
 	bool turned = false ;
 
-	int decalage = nodeV->place - nodeU->place ; // Decalage is the difference of index between U and V
-	if (decalage >= -1 && decalage <= 1) return 0 ; // This means that U and V are already consecutive, testing these moves is useless
+	int shift = nodeV->place - nodeU->place ; // Decalage is the difference of index between U and V
+	if (shift >= -1 && shift <= 1) return 0 ; // This means that U and V are already consecutive, testing these moves is useless
 
-	// If decalage < 0, this means that V is on the left of U in the route
+	// If shift < 0, this means that V is on the left of U in the route
 	// We don't want to deal with this case, so we simply inverse the notations of U and V 
 	// And we deal in the following with only the case where V is on the right
-	if ( decalage < 0 )
+	if (shift < 0 )
 	{
         nodeU = tempV ;
         nodeV = tempU ;
 		x = nodeU->nextNode ;
 		y = nodeV->nextNode ;
-		decalage = -decalage ;
+        shift = -shift ;
 		turned = true ;
 	}
 
@@ -715,7 +738,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 
 	resultMoves[0][0] = costZero ;
 
-	if (decalage >= 3) // General case
+	if (shift >= 3) // General case
 	{
 		if (!nodeV->isDepot && turned) // relocate of V before U (V cannot be a depot, but U can be)
 		{
@@ -869,7 +892,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 			}
 		}
 	}
-	else if (decalage == 2) // U and V are almost consecutive, we are in this situation : UXVY. Useful moves must be tested as special cases
+	else if (shift == 2) // U and V are almost consecutive, we are in this situation : UXVY. Useful moves must be tested as special cases
 	{
 		// XUVY
 		resultMoves[1][0] = seq->evaluationLB(Upred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeU->vehicle);
@@ -910,7 +933,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 
 
 	// Same procedure as previously, but with "seq->evaluation" instead of "seq->evaluationLB"
-	if (decalage >= 3)
+	if (shift >= 3)
 	{
 		if (!nodeV->isDepot && turned)
 		{
@@ -1095,7 +1118,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 			}
 		}
 	}
-	else if (decalage == 2)
+	else if (shift == 2)
 	{
 		// XUVY
 		if (shouldBeTested[1][0]) resultMoves[1][0] = seq->evaluation(Upred->seq0_i, nodeU->seq21, nodeV->seqi_n, routeU->vehicle);
@@ -1154,7 +1177,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	reinitSingleDayMoves(routeU);  // Say that all moves involving this route must be tested again
 
 	// Update the solution
-	if (decalage >= 3)
+	if (shift >= 3)
 	{
 		if ( ibest == 1 || ibest == 2) insertNoeud(nodeU, placeV);
 		if ( ibest == 2 ) insertNoeud(x, nodeU);
@@ -1166,7 +1189,7 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 	}
 
 	// Special cases of decalage == 2
-	else if (decalage == 2)
+	else if (shift == 2)
 	{
 		if (ibest == 1 && jbest == 0) { insertNoeud(nodeU, x); }
 		else if (ibest == 1 && jbest == 1) { insertNoeud(x, nodeV); insertNoeud(nodeU, x);  }
@@ -1193,6 +1216,9 @@ int LocalSearch::intraRouteGeneralInsertDroite ()
 int LocalSearch::intraRoute2Opt ()
 {
 	// Evaluation procedure for 2-Opt
+	/*
+	 * A->U->V->B  =>  A->V->U->B
+	 */
 	Node * nodeNum = nodeU->nextNode ;
 	Node * nodeUpred = nodeU->pred ;
 	Node * temp ;

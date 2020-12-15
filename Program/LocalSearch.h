@@ -117,7 +117,7 @@ private:
 	int interRouteGeneralInsert(); // Inter-Route General Insert (testing all moves together for a customer pair [i,j] enables to gain a few evaluations)
 	int interRoute2Opt(); // 2-OPT* (without inversion of the routes)
 	int interRoute2OptInv() ; // 2-OPT* (with inversion of the routes)
-	int intraRouteGeneralInsertDroite(); // Intra-Route General Insert (testing all moves together for a customer pair [i,j] enables to gain a few evaluations)
+	int intraRouteGeneralInsertRight(); // Intra-Route General Insert (testing all moves together for a customer pair [i,j] enables to gain a few evaluations)
     int intraRoute2Opt (); // Intra-Route 2-Opt
 
 	// change the pattern of "client" if its possible to find a better pattern (PI)
