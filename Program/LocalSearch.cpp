@@ -71,7 +71,7 @@ int LocalSearch::mutationSameDay (int day) {
     /*
      * 1. 根据routeOrder的顺序，选取U节点
      *    - 如果U节点的移除不能获得收益，之后不进行swap和relocate相关的邻域操作
-     * 2. 在U节点的所有moves节点中顺序选择节点：
+     * 2. 在U节点的所有moves节点中顺序选择节点V：
      *    - 如果移除可以获得收益，Relocate, Swap, CROSS and I-CROSS
      *    - 如果V和U不在同一个路径，2-opt 2-opt*
      *    - 将V设为U后的节点，进行路径内的2opt
